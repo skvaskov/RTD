@@ -1,0 +1,535 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>Tutorial for SurfaceIntersection Function</title><meta name="generator" content="MATLAB 8.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2014-11-27"><meta name="DC.source" content="SurfaceIntersection_tutorial.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>Tutorial for SurfaceIntersection Function</h1><!--introduction--><p><b>By Jarek Tuszynski (<a href="mailto:jaroslaw.w.tuszynski@leidos.com">jaroslaw.w.tuszynski@leidos.com</a>)</b></p><p>Triangle/triangle intersection using the algorithm proposed by Tomas M&ouml;ller (1997), implemented as highly vectorized MATLAB code. The algorithm was expanded to include calculation of the intersection surface.</p><p>[intMatrix, intSurface] = SurfaceIntersection(surface1, surface2) calculates the intersection of surfaces 1 and 2. Code can either return just the matrix indicating which face of surface1 intersected with face of surface2, which is calculated using Tomas Moller algorithm, or can also return the actual line or surface of intersection. In case when parts of the surface 1 and 2 lay on the same plane the intersection is a 2D area instead of 1D edge. In such a case the intersection area will be triangulated and intSurface.edges will hold the edges of the triangulation surface and intSurface.faces will hold the faces.</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">References</a></li><li><a href="#2">Change History</a></li><li><a href="#3">Licence</a></li><li><a href="#4">Define three surfaces and plot them</a></li><li><a href="#5">Run SurfaceIntersection and plot the results</a></li><li><a href="#6">Test SurfaceIntersection on surfaces laying on the same plane (coplanar)</a></li><li><a href="#7">Test SurfaceIntersection on surfaces laying on the same plane (coplanar)</a></li><li><a href="#8">Compare runs with and without intersection calculation: test #1</a></li><li><a href="#9">Compare runs with and without intersection calculation: test #2</a></li><li><a href="#10">Draw contour lines of a sphere</a></li><li><a href="#11">Draw contour lines of a cone or conics</a></li></ul></div><h2>References<a name="1"></a></h2><p>Based on Triangle/triangle intersection test routine by Tomas M&ouml;ller, 1997.  See article "A Fast Triangle-Triangle Intersection Test",  Journal of Graphics Tools, 2(2), 1997  <a href="http://web.stanford.edu/class/cs277/resources/papers/Moller1997b.pdf">http://web.stanford.edu/class/cs277/resources/papers/Moller1997b.pdf</a>  <a href="http://fileadmin.cs.lth.se/cs/Personal/Tomas_Akenine-Moller/code/opttritri.txt">http://fileadmin.cs.lth.se/cs/Personal/Tomas_Akenine-Moller/code/opttritri.txt</a></p><h2>Change History<a name="2"></a></h2><div><ul><li>2014-11-17 - original version</li></ul></div><h2>Licence<a name="3"></a></h2><p>The package is distributed under BSD Licence</p><pre class="codeinput">format <span class="string">compact</span>; <span class="comment">% viewing preference</span>
+clear <span class="string">variables</span>;
+type(<span class="string">'license.txt'</span>)
+</pre><pre class="codeoutput">
+Copyright (c) 2014, Jaroslaw Tuszynski
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without 
+modification, are permitted provided that the following conditions are 
+met:
+
+    * Redistributions of source code must retain the above copyright 
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright 
+      notice, this list of conditions and the following disclaimer in 
+      the documentation and/or other materials provided with the distribution
+      
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF 
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN 
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE 
+POSSIBILITY OF SUCH DAMAGE.
+</pre><h2>Define three surfaces and plot them<a name="4"></a></h2><pre class="codeinput"><span class="comment">% Create Surface #1</span>
+[x,y] = pol2cart((0:2)'*2*pi/3,40);
+Surface1.vertices = [0 0 110; x y [0; 0; 0]];
+Surface1.faces    = [1 2 3; 1 3 4; 1 4 2; 2 3 4];
+<span class="comment">% Create Surface #2</span>
+load <span class="string">tetmesh</span>;
+TR = triangulation(tet,X);
+[Surface2.faces, Surface2.vertices] = freeBoundary(TR);
+<span class="comment">% Create Surface #3</span>
+Surface3.vertices = [x y [30; 30; 30]; y x [60; 60; 60]];
+Surface3.faces    = [1:3;4:6];
+<span class="comment">% Plot them</span>
+clf; hold <span class="string">on</span>
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>);
+S=Surface2; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'g'</span>);
+S=Surface3; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>);
+view([3 1 1])
+axis <span class="string">equal</span>
+title (<span class="string">'Three test surfaces'</span>)
+legend({<span class="string">'#1'</span>, <span class="string">'#2'</span>, <span class="string">'#3'</span>});
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_01.png" alt=""> <h2>Run SurfaceIntersection and plot the results<a name="5"></a></h2><p>Parts of Surface #1 and #2 are on the same plane and the intersection is a 2D area instead of collection of 1D edges</p><pre class="codeinput">[intersect12, Surf12] = SurfaceIntersection(Surface1, Surface2);
+[intersect13, Surf13] = SurfaceIntersection(Surface1, Surface3);
+[intersect23, Surf23] = SurfaceIntersection(Surface3, Surface2);
+
+clf; hold <span class="string">on</span>
+S=Surf12; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'r'</span>, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>);
+S=Surf13; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'g'</span>, <span class="string">'FaceColor'</span>, <span class="string">'g'</span>);
+S=Surf23; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'b'</span>, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>);
+title (<span class="string">'Surface/Surface intersections'</span>)
+legend({<span class="string">'#1/#2'</span>, <span class="string">'#1/#3'</span>, <span class="string">'#2/#3'</span>});
+view([3 1 1])
+axis <span class="string">equal</span>
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_02.png" alt=""> <h2>Test SurfaceIntersection on surfaces laying on the same plane (coplanar)<a name="6"></a></h2><pre class="codeinput">clf; hold <span class="string">on</span>
+<span class="comment">% Define surface #1</span>
+SurfaceA.vertices = rand([10,2]);
+Sa = delaunayTriangulation(SurfaceA.vertices);
+SurfaceA.faces = Sa.ConnectivityList;
+SurfaceA.vertices(:,3)=0;
+<span class="comment">% Define surface #2</span>
+SurfaceB.vertices = rand([10,2]);
+Sb = delaunayTriangulation(SurfaceB.vertices);
+SurfaceB.faces = Sb.ConnectivityList;
+SurfaceB.vertices(:,3)=0;
+<span class="comment">% Calculate intersection</span>
+[~, SurfAB] = SurfaceIntersection(SurfaceA, SurfaceB);
+<span class="comment">% Plot all</span>
+S=SurfaceA; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'k'</span>, <span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>);
+S=SurfaceB; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'k'</span>, <span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>);
+S=SurfAB;   trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'k'</span>, <span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'m'</span>);
+legend({<span class="string">'Surface #1'</span>, <span class="string">'Surface #2'</span>, <span class="string">'Intersection'</span>});
+axis <span class="string">equal</span>
+title(<span class="string">'Coplanar surfaces with 10 points each'</span>)
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_03.png" alt=""> <h2>Test SurfaceIntersection on surfaces laying on the same plane (coplanar)<a name="7"></a></h2><pre class="codeinput">clf; hold <span class="string">on</span>
+<span class="comment">% Define surface #1</span>
+SurfaceA.vertices = rand([100,2]);
+Sa = delaunayTriangulation(SurfaceA.vertices);
+SurfaceA.faces = Sa.ConnectivityList;
+SurfaceA.vertices(:,3)=0;
+<span class="comment">% Define surface #2</span>
+SurfaceB.vertices = rand([100,2]);
+Sb = delaunayTriangulation(SurfaceB.vertices);
+SurfaceB.faces = Sb.ConnectivityList;
+SurfaceB.vertices(:,3)=0;
+<span class="comment">% Calculate intersection</span>
+[~, SurfAB] = SurfaceIntersection(SurfaceA, SurfaceB);
+<span class="comment">% Plot all</span>
+S=SurfaceA; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'k'</span>, <span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>);
+S=SurfaceB; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'k'</span>, <span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>);
+S=SurfAB;   trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'EdgeColor'</span>, <span class="string">'k'</span>, <span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'m'</span>);
+legend({<span class="string">'Surface #1'</span>, <span class="string">'Surface #2'</span>, <span class="string">'Intersection'</span>});
+axis <span class="string">equal</span>
+title(<span class="string">'Coplanar surfaces with 100 points each'</span>)
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_04.png" alt=""> <h2>Compare runs with and without intersection calculation: test #1<a name="8"></a></h2><pre class="codeinput"><span class="comment">% Define two surfaces</span>
+Surface1 = surf2patch(membrane(1,30),<span class="string">'triangles'</span>);
+Surface2 = surf2patch(membrane(3,30),<span class="string">'triangles'</span>);
+<span class="comment">% add a bit of perturbation to x and y coordinates of surface 2</span>
+Surface2.vertices(:,1:2) = Surface2.vertices(:,1:2) + 1E-3*randn(size(Surface2.vertices(:,1:2)));
+fprintf(<span class="string">'25%% coplanar faces.\n# faces in surface 1 = %i; # faces in surface 2 = %i\n'</span>, <span class="keyword">...</span>
+  size(Surface1.faces,1), size(Surface2.faces,1));
+<span class="comment">% Plot two surfaces</span>
+clf; hold <span class="string">on</span>
+subplot(2,1,1)
+patch(Surface1, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>,<span class="string">'EdgeColor'</span>, <span class="string">'none'</span>, <span class="string">'FaceAlpha'</span>, 0.8);
+patch(Surface2, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>,<span class="string">'EdgeColor'</span>, <span class="string">'none'</span>, <span class="string">'FaceAlpha'</span>, 0.8);
+title(<span class="string">'Two surfaces'</span>)
+view(-195, 44)
+<span class="comment">% Run and time the intersection function</span>
+tic; [intersect_a] = SurfaceIntersection(Surface1, Surface2);
+fprintf(<span class="string">'Run time without intersection calculation is %f\n'</span>, toc)
+tic; [intersect_b, Surf12] = SurfaceIntersection(Surface1, Surface2);
+fprintf(<span class="string">'Run time with    intersection calculation is %f\n'</span>, toc)
+<span class="comment">% Plot the results</span>
+subplot(2,1,2)
+S=Surf12; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3), <span class="string">'FaceColor'</span>, <span class="string">'g'</span>);
+view(-195, 44)
+title(<span class="string">'Surface intersection'</span>)
+fprintf(<span class="string">'Number of face pairs is %i and number of intersections is %i\n'</span>, <span class="keyword">...</span>
+  size(Surface1.faces,1)*size(Surface2.faces,1), nnz(intersect_a));
+fprintf(<span class="string">'Number of differences: %i\n'</span>, nnz(intersect_a~=intersect_b));
+</pre><pre class="codeoutput">25% coplanar faces.
+# faces in surface 1 = 7200; # faces in surface 2 = 7200
+Run time without intersection calculation is 12.934015
+Run time with    intersection calculation is 19.862958
+Number of face pairs is 51840000 and number of intersections is 11023
+Number of differences: 0
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_05.png" alt=""> <h2>Compare runs with and without intersection calculation: test #2<a name="9"></a></h2><pre class="codeinput"><span class="comment">% Define two surfaces</span>
+Surface1 = surf2patch(membrane(1,30),<span class="string">'triangles'</span>);
+Surface2 = surf2patch(membrane(3,30),<span class="string">'triangles'</span>);
+<span class="comment">% add a bit of perturbation to the coordinates of surface 2</span>
+Surface2.vertices = Surface2.vertices + 1E-3*randn(size(Surface2.vertices));
+fprintf(<span class="string">'No coplanar faces.\n# faces in surface 1 = %i; # faces in surface 2 = %i\n'</span>, <span class="keyword">...</span>
+  size(Surface1.faces,1), size(Surface2.faces,1));
+<span class="comment">% Plot two surfaces</span>
+clf; hold <span class="string">on</span>
+subplot(2,1,1)
+patch(Surface1, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>,<span class="string">'EdgeColor'</span>, <span class="string">'none'</span>, <span class="string">'FaceAlpha'</span>, 0.8);
+patch(Surface2, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>,<span class="string">'EdgeColor'</span>, <span class="string">'none'</span>, <span class="string">'FaceAlpha'</span>, 0.8);
+title(<span class="string">'Two surfaces'</span>)
+view(-195, 44)
+<span class="comment">% Run and time the intersection function</span>
+tic; [intersect_a] = SurfaceIntersection(Surface1, Surface2);
+fprintf(<span class="string">'Run time without intersection calculation is %f\n'</span>, toc)
+tic; [intersect_b, Surf12] = SurfaceIntersection(Surface1, Surface2);
+fprintf(<span class="string">'Run time with    intersection calculation is %f\n'</span>, toc)
+subplot(2,1,2)
+S=Surf12; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3), <span class="string">'FaceColor'</span>, <span class="string">'g'</span>);
+<span class="comment">% Plot the results</span>
+view(-195, 44)
+title(<span class="string">'Surface intersection'</span>)
+fprintf(<span class="string">'Number of face pairs is %i and number of intersections is %i\n'</span>, <span class="keyword">...</span>
+  size(Surface1.faces,1)*size(Surface2.faces,1), nnz(intersect_a));
+fprintf(<span class="string">'Number of differences: %i\n'</span>, nnz(intersect_a~=intersect_b));
+</pre><pre class="codeoutput">No coplanar faces.
+# faces in surface 1 = 7200; # faces in surface 2 = 7200
+Run time without intersection calculation is 5.702677
+Run time with    intersection calculation is 6.239134
+Number of face pairs is 51840000 and number of intersections is 3405
+Number of differences: 0
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_06.png" alt=""> <h2>Draw contour lines of a sphere<a name="10"></a></h2><pre class="codeinput"><span class="comment">% Create Surface #1: the sphere</span>
+[x,y,z] = sphere(50);
+DT = delaunayTriangulation(z(:), y(:), x(:));
+[Surface1.faces, Surface1.vertices] = freeBoundary(DT);
+<span class="comment">% Create Surface #2: 11 equally spaced parallel planes</span>
+Surface2=[];
+<span class="keyword">for</span> i=0:10
+  z = -0.95 + i/5;
+  Surface2.vertices(3*i+(1:3),:) = [2, 0, z; -1, 1.7, z; -1, -1.7, z];
+  Surface2.faces(i+1,:) = 3*i+(1:3);
+<span class="keyword">end</span>
+[~, Surf12] = SurfaceIntersection(Surface1, Surface2);
+Surf12.vertices(:,3) = -1.5; <span class="comment">% project the contour lines on a single plane</span>
+<span class="comment">% plot the results</span>
+figure(1); clf; hold <span class="string">on</span>
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>)
+S=Surface2; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>)
+S=Surf12;   line(<span class="keyword">...</span>
+  [S.vertices(S.edges(:,1),1), S.vertices(S.edges(:,2),1)]',<span class="keyword">...</span>
+  [S.vertices(S.edges(:,1),2), S.vertices(S.edges(:,2),2)]',<span class="keyword">...</span>
+  [S.vertices(S.edges(:,1),3), S.vertices(S.edges(:,2),3)]',<span class="keyword">...</span>
+  <span class="string">'Color'</span>, <span class="string">'r'</span>);
+axis <span class="string">equal</span>
+view(170, 20)
+</pre><pre class="codeoutput">Warning: Duplicate data points have been detected and removed.
+ The Triangulation indices are defined with respect to the unique set of points
+ in delaunayTriangulation property X. 
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_07.png" alt=""> <h2>Draw contour lines of a cone or conics<a name="11"></a></h2><pre class="codeinput"><span class="comment">% Create Surface #1: the double cone</span>
+XYZ=[];
+XYZ(1,:)=[0 0 0];
+<span class="keyword">for</span> z = 1:100
+  n=z+5;
+  [x,y] = pol2cart((1:n)'*2*pi/n,z);
+  XYZ = [XYZ; [x y z*x./x]];
+<span class="keyword">end</span>
+DT = delaunayTriangulation(XYZ(:,1),XYZ(:,2));
+Surface1.faces = [DT.ConnectivityList; DT.ConnectivityList+size(XYZ,1)];
+Surface1.vertices = [XYZ(:,3),XYZ(:,2),XYZ(:,1); -XYZ(:,3),XYZ(:,2),XYZ(:,1)]/100;
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>);
+<span class="comment">% Create Surface #2: 11 equally spaced parallel planes</span>
+Surface2=[];
+<span class="keyword">for</span> i=0:10
+  z = -0.95 + i/5;
+  Surface2.vertices(3*i+(1:3),:) = [2, 0, z; -1, 1.7, z; -1, -1.7, z];
+  Surface2.faces(i+1,:) = 3*i+(1:3);
+<span class="keyword">end</span>
+[~, Surf12] = SurfaceIntersection(Surface1, Surface2);
+Surf12.vertices(:,3) = -1.5; <span class="comment">% project the contour lines on a single plane</span>
+<span class="comment">% plot the results</span>
+figure(1); clf; hold <span class="string">on</span>
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'r'</span>)
+S=Surface2; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),<span class="string">'FaceAlpha'</span>, 0.5, <span class="string">'FaceColor'</span>, <span class="string">'b'</span>)
+S=Surf12;   line(<span class="keyword">...</span>
+  [S.vertices(S.edges(:,1),1), S.vertices(S.edges(:,2),1)]',<span class="keyword">...</span>
+  [S.vertices(S.edges(:,1),2), S.vertices(S.edges(:,2),2)]',<span class="keyword">...</span>
+  [S.vertices(S.edges(:,1),3), S.vertices(S.edges(:,2),3)]',<span class="keyword">...</span>
+  <span class="string">'Color'</span>, <span class="string">'r'</span>);
+axis <span class="string">equal</span>
+view(-190, 15)
+</pre><img vspace="5" hspace="5" src="SurfaceIntersection_tutorial_08.png" alt=""> <p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% Tutorial for SurfaceIntersection Function
+% *By Jarek Tuszynski (jaroslaw.w.tuszynski@leidos.com)*
+%
+% Triangle/triangle intersection using the algorithm proposed by Tomas 
+% Möller (1997), implemented as highly vectorized MATLAB code. The
+% algorithm was expanded to include calculation of the intersection
+% surface.
+%
+% [intMatrix, intSurface] = SurfaceIntersection(surface1, surface2)
+% calculates the intersection of surfaces 1 and 2. Code can either return
+% just the matrix indicating which face of surface1 intersected with face
+% of surface2, which is calculated using Tomas Moller algorithm, or can
+% also return the actual line or surface of intersection. In case when parts 
+% of the surface 1 and 2 lay on the same plane the intersection is a 2D  
+% area instead of 1D edge. In such a case the intersection area will be 
+% triangulated and intSurface.edges will hold the edges of the
+% triangulation surface and intSurface.faces will hold the faces.
+%
+%% References
+% Based on Triangle/triangle intersection test routine by Tomas Möller, 1997.
+%  See article "A Fast Triangle-Triangle Intersection Test",
+%  Journal of Graphics Tools, 2(2), 1997
+%  http://web.stanford.edu/class/cs277/resources/papers/Moller1997b.pdf
+%  http://fileadmin.cs.lth.se/cs/Personal/Tomas_Akenine-Moller/code/opttritri.txt
+%
+%% Change History
+% * 2014-11-17 - original version
+
+%% Licence
+% The package is distributed under BSD Licence
+format compact; % viewing preference
+clear variables;
+type('license.txt')
+
+%% Define three surfaces and plot them
+
+% Create Surface #1
+[x,y] = pol2cart((0:2)'*2*pi/3,40);
+Surface1.vertices = [0 0 110; x y [0; 0; 0]];
+Surface1.faces    = [1 2 3; 1 3 4; 1 4 2; 2 3 4];
+% Create Surface #2
+load tetmesh;
+TR = triangulation(tet,X);
+[Surface2.faces, Surface2.vertices] = freeBoundary(TR);
+% Create Surface #3
+Surface3.vertices = [x y [30; 30; 30]; y x [60; 60; 60]];
+Surface3.faces    = [1:3;4:6];
+% Plot them
+clf; hold on
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'r');
+S=Surface2; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'g');
+S=Surface3; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'b');
+view([3 1 1])
+axis equal
+title ('Three test surfaces')
+legend({'#1', '#2', '#3'});
+
+%% Run SurfaceIntersection and plot the results
+% Parts of Surface #1 and #2 are on the same plane and the intersection is
+% a 2D area instead of collection of 1D edges
+[intersect12, Surf12] = SurfaceIntersection(Surface1, Surface2);
+[intersect13, Surf13] = SurfaceIntersection(Surface1, Surface3);
+[intersect23, Surf23] = SurfaceIntersection(Surface3, Surface2);
+
+clf; hold on
+S=Surf12; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'r', 'FaceColor', 'r');
+S=Surf13; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'g', 'FaceColor', 'g');
+S=Surf23; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'b', 'FaceColor', 'b');
+title ('Surface/Surface intersections')
+legend({'#1/#2', '#1/#3', '#2/#3'});
+view([3 1 1])
+axis equal
+
+%% Test SurfaceIntersection on surfaces laying on the same plane (coplanar)
+clf; hold on
+% Define surface #1
+SurfaceA.vertices = rand([10,2]);
+Sa = delaunayTriangulation(SurfaceA.vertices);
+SurfaceA.faces = Sa.ConnectivityList;
+SurfaceA.vertices(:,3)=0;
+% Define surface #2
+SurfaceB.vertices = rand([10,2]);
+Sb = delaunayTriangulation(SurfaceB.vertices);
+SurfaceB.faces = Sb.ConnectivityList;
+SurfaceB.vertices(:,3)=0;
+% Calculate intersection
+[~, SurfAB] = SurfaceIntersection(SurfaceA, SurfaceB);
+% Plot all
+S=SurfaceA; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'k', 'FaceAlpha', 0.5, 'FaceColor', 'r');
+S=SurfaceB; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'k', 'FaceAlpha', 0.5, 'FaceColor', 'b');
+S=SurfAB;   trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'k', 'FaceAlpha', 0.5, 'FaceColor', 'm');
+legend({'Surface #1', 'Surface #2', 'Intersection'});
+axis equal
+title('Coplanar surfaces with 10 points each')
+
+%% Test SurfaceIntersection on surfaces laying on the same plane (coplanar)
+clf; hold on
+% Define surface #1
+SurfaceA.vertices = rand([100,2]);
+Sa = delaunayTriangulation(SurfaceA.vertices);
+SurfaceA.faces = Sa.ConnectivityList;
+SurfaceA.vertices(:,3)=0;
+% Define surface #2
+SurfaceB.vertices = rand([100,2]);
+Sb = delaunayTriangulation(SurfaceB.vertices);
+SurfaceB.faces = Sb.ConnectivityList;
+SurfaceB.vertices(:,3)=0;
+% Calculate intersection
+[~, SurfAB] = SurfaceIntersection(SurfaceA, SurfaceB);
+% Plot all
+S=SurfaceA; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'k', 'FaceAlpha', 0.5, 'FaceColor', 'r');
+S=SurfaceB; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'k', 'FaceAlpha', 0.5, 'FaceColor', 'b');
+S=SurfAB;   trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'EdgeColor', 'k', 'FaceAlpha', 0.5, 'FaceColor', 'm');
+legend({'Surface #1', 'Surface #2', 'Intersection'});
+axis equal
+title('Coplanar surfaces with 100 points each')
+
+%% Compare runs with and without intersection calculation: test #1
+
+% Define two surfaces
+Surface1 = surf2patch(membrane(1,30),'triangles');
+Surface2 = surf2patch(membrane(3,30),'triangles');
+% add a bit of perturbation to x and y coordinates of surface 2
+Surface2.vertices(:,1:2) = Surface2.vertices(:,1:2) + 1E-3*randn(size(Surface2.vertices(:,1:2)));
+fprintf('25%% coplanar faces.\n# faces in surface 1 = %i; # faces in surface 2 = %i\n', ...
+  size(Surface1.faces,1), size(Surface2.faces,1));
+% Plot two surfaces
+clf; hold on
+subplot(2,1,1)
+patch(Surface1, 'FaceColor', 'b','EdgeColor', 'none', 'FaceAlpha', 0.8);
+patch(Surface2, 'FaceColor', 'r','EdgeColor', 'none', 'FaceAlpha', 0.8);
+title('Two surfaces')
+view(-195, 44)
+% Run and time the intersection function
+tic; [intersect_a] = SurfaceIntersection(Surface1, Surface2);
+fprintf('Run time without intersection calculation is %f\n', toc)
+tic; [intersect_b, Surf12] = SurfaceIntersection(Surface1, Surface2);
+fprintf('Run time with    intersection calculation is %f\n', toc)
+% Plot the results
+subplot(2,1,2)
+S=Surf12; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3), 'FaceColor', 'g');
+view(-195, 44)
+title('Surface intersection')
+fprintf('Number of face pairs is %i and number of intersections is %i\n', ...
+  size(Surface1.faces,1)*size(Surface2.faces,1), nnz(intersect_a));
+fprintf('Number of differences: %i\n', nnz(intersect_a~=intersect_b));
+
+%% Compare runs with and without intersection calculation: test #2
+
+% Define two surfaces
+Surface1 = surf2patch(membrane(1,30),'triangles');
+Surface2 = surf2patch(membrane(3,30),'triangles');
+% add a bit of perturbation to the coordinates of surface 2
+Surface2.vertices = Surface2.vertices + 1E-3*randn(size(Surface2.vertices));
+fprintf('No coplanar faces.\n# faces in surface 1 = %i; # faces in surface 2 = %i\n', ...
+  size(Surface1.faces,1), size(Surface2.faces,1));
+% Plot two surfaces
+clf; hold on
+subplot(2,1,1)
+patch(Surface1, 'FaceColor', 'b','EdgeColor', 'none', 'FaceAlpha', 0.8);
+patch(Surface2, 'FaceColor', 'r','EdgeColor', 'none', 'FaceAlpha', 0.8);
+title('Two surfaces')
+view(-195, 44)
+% Run and time the intersection function
+tic; [intersect_a] = SurfaceIntersection(Surface1, Surface2);
+fprintf('Run time without intersection calculation is %f\n', toc)
+tic; [intersect_b, Surf12] = SurfaceIntersection(Surface1, Surface2);
+fprintf('Run time with    intersection calculation is %f\n', toc)
+subplot(2,1,2)
+S=Surf12; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3), 'FaceColor', 'g');
+% Plot the results
+view(-195, 44)
+title('Surface intersection')
+fprintf('Number of face pairs is %i and number of intersections is %i\n', ...
+  size(Surface1.faces,1)*size(Surface2.faces,1), nnz(intersect_a));
+fprintf('Number of differences: %i\n', nnz(intersect_a~=intersect_b));
+
+%% Draw contour lines of a sphere
+
+% Create Surface #1: the sphere
+[x,y,z] = sphere(50);
+DT = delaunayTriangulation(z(:), y(:), x(:));
+[Surface1.faces, Surface1.vertices] = freeBoundary(DT);
+% Create Surface #2: 11 equally spaced parallel planes 
+Surface2=[];
+for i=0:10
+  z = -0.95 + i/5;
+  Surface2.vertices(3*i+(1:3),:) = [2, 0, z; -1, 1.7, z; -1, -1.7, z];
+  Surface2.faces(i+1,:) = 3*i+(1:3);
+end
+[~, Surf12] = SurfaceIntersection(Surface1, Surface2);
+Surf12.vertices(:,3) = -1.5; % project the contour lines on a single plane
+% plot the results
+figure(1); clf; hold on
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'r')
+S=Surface2; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'b')
+S=Surf12;   line(...
+  [S.vertices(S.edges(:,1),1), S.vertices(S.edges(:,2),1)]',...
+  [S.vertices(S.edges(:,1),2), S.vertices(S.edges(:,2),2)]',...
+  [S.vertices(S.edges(:,1),3), S.vertices(S.edges(:,2),3)]',...
+  'Color', 'r');
+axis equal
+view(170, 20)
+
+%% Draw contour lines of a cone or conics
+
+% Create Surface #1: the double cone
+XYZ=[];
+XYZ(1,:)=[0 0 0];
+for z = 1:100
+  n=z+5;
+  [x,y] = pol2cart((1:n)'*2*pi/n,z);
+  XYZ = [XYZ; [x y z*x./x]];
+end
+DT = delaunayTriangulation(XYZ(:,1),XYZ(:,2));
+Surface1.faces = [DT.ConnectivityList; DT.ConnectivityList+size(XYZ,1)];
+Surface1.vertices = [XYZ(:,3),XYZ(:,2),XYZ(:,1); -XYZ(:,3),XYZ(:,2),XYZ(:,1)]/100;
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'r');
+% Create Surface #2: 11 equally spaced parallel planes 
+Surface2=[];
+for i=0:10
+  z = -0.95 + i/5;
+  Surface2.vertices(3*i+(1:3),:) = [2, 0, z; -1, 1.7, z; -1, -1.7, z];
+  Surface2.faces(i+1,:) = 3*i+(1:3);
+end
+[~, Surf12] = SurfaceIntersection(Surface1, Surface2);
+Surf12.vertices(:,3) = -1.5; % project the contour lines on a single plane
+% plot the results
+figure(1); clf; hold on
+S=Surface1; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'r')
+S=Surface2; trisurf(S.faces, S.vertices(:,1),S.vertices(:,2),S.vertices(:,3),'FaceAlpha', 0.5, 'FaceColor', 'b')
+S=Surf12;   line(...
+  [S.vertices(S.edges(:,1),1), S.vertices(S.edges(:,2),1)]',...
+  [S.vertices(S.edges(:,1),2), S.vertices(S.edges(:,2),2)]',...
+  [S.vertices(S.edges(:,1),3), S.vertices(S.edges(:,2),3)]',...
+  'Color', 'r');
+axis equal
+view(-190, 15)
+##### SOURCE END #####
+--></body></html>

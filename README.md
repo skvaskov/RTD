@@ -4,7 +4,7 @@ This repository contains code for the paper, ["Bridging the Gap Between Safety a
 
 Check out the [repo](https://github.com/ramvasudevan/RTD) and [tutorial](https://github.com/skousik/RTD_tutorial) to better understand the method. This repository follows the tutorial, but for the Segway and Rover instead of for the Turtlebot.
 
-<img src="segway_time_lapse.jpg" alt="segway_time_lapse" style="zoom:20%;" />
+<img src="figures/segway_time_lapse.jpg" alt="segway_time_lapse" style="zoom:20%;" />
 
 
 
@@ -12,7 +12,7 @@ Check out the [repo](https://github.com/ramvasudevan/RTD) and [tutorial](https:/
 
 All the code in this repository runs in MATLAB (R2018a or newer).
 
-This repository contains everything you need to start playing with RTD. We have included a "frozen in time" version of our simulator repository, and RTD repository.
+This repository contains everything you need to start playing with RTD. We have included a "frozen in time" version of our [simulator](https://github.com/skousik/simulator) repository.
 
 To run the comparison code, you'll need to get [GPOPS](http://www.gpops2.com/) (free for academic).
 
