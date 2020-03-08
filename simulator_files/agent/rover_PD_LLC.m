@@ -2,7 +2,7 @@ classdef rover_PD_LLC < low_level_controller
     properties
         % control gains
         yaw_gain = 0 ;
-        yaw_rate_gain = 1 ;
+        yaw_rate_gain = 2 ;
     end
     
     methods
@@ -36,8 +36,11 @@ classdef rover_PD_LLC < low_level_controller
                 v_des = z_des(A.speed_index) ;
                 h_des = z_des(A.heading_index) ;
             end
-            w_des = u_des(2) ;
+            
+            %convert yawrate to wheelangle 
             v_des = u_des(1) ;
+            w_des = v_des*tan(u_des(2))/(A.wheelbase+4.4e-7*v_des^2);
+
             
             
             k_h = LLC.yaw_gain ;
