@@ -27,6 +27,24 @@ classdef RoverAWD < RTD_agent_2D
                 'stopping_time',stopping_time,'sensor_radius',sensor_radius,varargin{:},'LLC',LLC,varargin{:}) ;
         end
         
+        %% functions to convert yawrate and velocty to wheel angle and vice-versa
+        
+        function yawrate = wheelangle_to_yawrate(A,v,wheelangle)
+            l = A.wheelbase;
+            yawrate = tan(wheelangle).*v./(l+4.4e-7*v.^2);
+        end
+        
+        function wheelangle = yawrate_to_wheelangle(A,v,yawrate)
+            l = A.wheelbase;
+            wheelangle = atan(yawrate.*(l+4.4e-7*v.^2)./v);
+            
+            wheelangle(v==0) = 0;  
+        end
+        
+        function vy = wheelangle_to_lateral_veloctity(A,v,wheelangle)
+              w = A.wheelangle_to_yawrate(v,wheelangle);
+              vy = w.*(A.rear_axel_to_center_of_mass-0.0140*v.^2);
+        end
          %% dynamics
         function zd = dynamics(A,t,z,T,U,Z)
             % handle no desired trajectory input
@@ -34,13 +52,12 @@ classdef RoverAWD < RTD_agent_2D
                 Z = [] ;
             end
          
-            l = A.wheelbase;
             lr = A.rear_axel_to_center_of_mass;
             
             % extract the states
             h = z(A.heading_index) ;
             v = z(A.speed_index) ;
-            delta = z(5);
+            wheelangle = z(5);
             
             % get nominal control inputs
             u = A.LLC.get_control_inputs(A,t,z,T,U,Z) ;
@@ -51,12 +68,10 @@ classdef RoverAWD < RTD_agent_2D
             % saturate the inputs
             v_des = bound_values(v_des,A.max_speed) ;
             delta_des = bound_values(delta_des,A.max_wheelangle) ;
-            
-            
-            
+                   
             % calculate the derivatives
-            w = tan(delta)*v/(l+4.4e-7*v^2);
-            vy = w*(lr-0.0140*v^2);
+            w = A.wheelangle_to_yawrate(v,wheelangle);
+            vy = A.wheelangle_to_lateral_veloctity(v,wheelangle);
             
             if v>0
                 cr = -0.0811;
@@ -70,7 +85,7 @@ classdef RoverAWD < RTD_agent_2D
             yd = v*sin(h)+vy*cos(h);
             hd = w ;
             vd = cr-1.4736*(v-v_des)+0.1257*(v-v_des)^2;
-            deltad = -5*(delta-delta_des);
+            deltad = -5*(wheelangle-delta_des);
             % return state derivative
             zd = [xd ; yd ; hd ; vd;deltad] ;
         end

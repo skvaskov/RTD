@@ -13,6 +13,8 @@ clear
 % Author: Sean Vaskov
 % Created: 06 March 2020
 
+degree = 3;
+
 %% user parameters
 % initial condition bounds (recall that the state is (x,y,h,v), but the
 % robot's dynamics in SE(2) are position/translation invariant)
@@ -23,8 +25,11 @@ v0_max = 2.0 ; % m/s
 w0_min = -1.0 ; % rad/s
 w0_max =  1.0 ; % rad/s
 
-min_spd = 1;
-max_spd = 2;
+v_des_min = 1;
+v_des_max = 2;
+
+w0_des_min = -1;
+w0_des_max = 1;
 
 psi_end_min = -0.5; %rad
 psi_end_max = 0.5; %rad
@@ -37,17 +42,16 @@ N_samples = 4 ;
 % timing
 t_sample = 0.01 ;
 
-%rover slip parameter for yawrate
-c_slip_yr = 4.4e-7;
 
 %% automated from here
 % create roveragent
 A = RoverAWD ;
 l = A.wheelbase;
+lr = A.rear_axel_to_center_of_mass;
 
 %convert yawrate to wheelangle to save
-delta0_min = min( atan(w0_min*(l+c_slip_yr*v0_max^2)/v0_max),atan(w0_min*(l+c_slip_yr*v0_min^2)/v0_min) );
-delta0_max = max( atan(w0_max*(l+c_slip_yr*v0_max^2)/v0_max),atan(w0_max*(l+c_slip_yr*v0_min^2)/v0_min) );
+delta0_min = min( A.yawrate_to_wheelangle([v0_max,v0_max,v0_min,v0_min],[w0_max,w0_min,w0_max,w0_min]));
+delta0_max = max( A.yawrate_to_wheelangle([v0_max,v0_max,v0_min,v0_min],[w0_max,w0_min,w0_max,w0_min]));
 
 % create initial condition vector
 v0_vec = linspace(v0_min,v0_max,N_samples) ;
@@ -82,7 +86,7 @@ T_data = unique([0:t_sample:t_f,t_f]) ;
 N_total = N_samples^5;
 v_data = nan(N_total,length(T_data)) ;
 w_data = nan(N_total,length(T_data)) ;
-
+vy_data = nan(N_total,length(T_data)) ;
 %% tracking error computation loop
 err_idx = 1 ;
 
@@ -92,24 +96,24 @@ for v0 = v0_vec
     for w0 = w0_vec
         
         % get approximate initial wheel angle from yawrate
-        delta0 = atan(w0*(l+c_slip_yr*v0^2)/v0);
+        delta0 = A.yawrate_to_wheelangle(v0,w0);
 
         % create the feasible speed commands from the initial condition
-        v_vec = linspace(max(v0 - delta_v,min_spd), min(v0 + delta_v,max_spd), N_samples) ;
+        v_vec = linspace(max(v0 - delta_v,v_des_min), min(v0 + delta_v,v_des_max), N_samples) ;
         
         % for each yaw and speed command...
         for v_des = v_vec
             for psi_end = psiend_vec
                 
                 % create the initial condition
-                z0 = [0;0;-psi_end;v0;delta0] ; % (x,y,h,v,delta)
+                z0 = [0;0;0;v0;delta0] ; % (x,y,h,v,delta)
                 
                 %create feasible initial yawrate commands from initial
                 %condition
-                w0_des_min = max(-1, 1/psi_end_max*psi_end-1);
-                w0_des_max = min(1, 1/psi_end_min*psi_end+1);
+                w0_des_min_temp = max(w0_des_min, -w0_des_min/psi_end_max*psi_end+w0_des_min);
+                w0_des_max_temp = min(w0_des_max, w0_des_max/-psi_end_min*psi_end+w0_des_max);
                 
-                w0_des_vec = linspace(w0_des_min,w0_des_max, N_samples);
+                w0_des_vec = linspace(w0_des_min_temp,w0_des_max_temp, N_samples);
                 
                 for w0_des = w0_des_vec
                     
@@ -134,10 +138,15 @@ for v0 = v0_vec
                     
                     %estimate yawrate from velocity
                     w_go = v_des*tan(U_go(2,:))/l;
-                    w_1 = z_1(4,:).*tan(z_1(5,:))./(l+c_slip_yr*z_1(4,:).^2);
+                    vy_go = lr*w_go;
+                    
+                    w_1 = A.wheelangle_to_yawrate(z_1(4,:),z_1(5,:)); 
+                    vy_1 = A.wheelangle_to_lateral_veloctity(z_1(4,:),z_1(5,:));
+                    
                     
                     w_data(err_idx,:) = abs(w_1-w_go);
                     v_data(err_idx,:) = abs(ve_1);
+                    vy_data(err_idx,:) = abs(vy_1-vy_go);
                     % increment counter
                     err_idx = err_idx + 1 ;
                     
@@ -164,19 +173,25 @@ toc
 % get the max of the error
 v_err = max(v_data,[],1) ;
 w_err = max(w_data,[],1) ;
+vy_err = max(vy_data,[],1);
 
 % fit polynomials to the max data
-g_v_coeffs = polyfit(T_data,v_err,4) ;
-g_w_coeffs = polyfit(T_data,w_err,4) ;
+g_v_coeffs = polyfit(T_data,v_err,degree) ;
+g_vy_coeffs = polyfit(T_data,vy_err,degree) ;
+g_w_coeffs = polyfit(T_data,w_err,degree) ;
 
 
 %% evaluate polynomial for plotting
 g_v_plot = polyval(g_v_coeffs,T_data ) ;
+g_vy_plot = polyval(g_vy_coeffs,T_data);
 g_w_plot = polyval(g_w_coeffs,T_data ) ;
 
 %% reconfigure polynomials to be greater than all data points
 g_v_coeffs(end) = g_v_coeffs(end) + max(g_v_plot-v_err);
 g_v_plot = polyval(g_v_coeffs,T_data ) ;
+
+g_vy_coeffs(end) = g_vy_coeffs(end) + max(g_vy_plot-vy_err);
+g_vy_plot = polyval(g_vy_coeffs,T_data ) ;
 
 g_w_coeffs(end) = g_w_coeffs(end) + max(g_w_plot-w_err);
 g_w_plot = polyval(g_w_coeffs,T_data ) ;
@@ -186,14 +201,14 @@ g_w_plot = polyval(g_w_coeffs,T_data ) ;
 filename = ['rover_error_functions_v0_',...
             num2str(v0_min,'%0.1f'),'_to_',...
             num2str(v0_max,'%0.1f'),'.mat'] ;
-save(filename,'g_v_coeffs','g_w_coeffs','delta0_min','delta0_max','psi_end_min','psi_end_max',...
-     'delta_v','v0_min','v0_max') ;
+save(filename,'g_v_coeffs','g_vy_coeffs','g_w_coeffs','delta0_min','delta0_max','psi_end_min','psi_end_max',...
+     'delta_v','v0_min','v0_max','w0_des_min','w0_des_max','v_des_min','v_des_max') ;
 
 %% plotting
 figure(1) ;
 
-% plot x error
-subplot(2,1,1) ; hold on ;
+% plot v error
+subplot(3,1,1) ; hold on ;
 plot(T_data,v_data','b:')
 g_v_handle = plot(T_data,g_v_plot,'r-','LineWidth',1.5) ;
 title('error in velocity')
@@ -202,8 +217,18 @@ ylabel('velocity error [m]')
 legend(g_v_handle,' g_v(t) dt','Location','NorthWest')
 set(gca,'FontSize',15)
 
-% plot y error
-subplot(2,1,2) ; hold on ;
+% plot vy error
+subplot(3,1,2) ; hold on ;
+plot(T_data,vy_data','b:')
+g_vy_handle = plot(T_data,g_vy_plot,'r-','LineWidth',1.5) ;
+title('error in lateral velocity')
+xlabel('time [s]')
+ylabel('velocity error [m]')
+legend(g_vy_handle,' g_vy(t) dt','Location','NorthWest')
+set(gca,'FontSize',15)
+
+% plot w error
+subplot(3,1,3) ; hold on ;
 plot(T_data,w_data','b:')
 g_w_handle = plot(T_data,g_w_plot,'r-','LineWidth',1.5) ;
 title('error in yawrate')
