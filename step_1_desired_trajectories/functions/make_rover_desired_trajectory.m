@@ -32,18 +32,18 @@ function [T,U,Z] = make_rover_desired_trajectory(t_f,w_0,psi_end,v_des)
     w_traj = w_0+w_slope*T;
     
     v_traj = v_des*ones(1,N_t) ;
+    
     if v_des~=0
         wheelangle_traj = atan(l*w_traj./v_traj);
     else
         wheelangle_traj = zeros(1,N_t);
     end
     
-    %trajectory producing model takes in a desired velocity and yaw rate
-    U_in = [v_traj;w_traj] ;
-
     % compute desired trajectory
     z0 = zeros(3,1) ;
-    [~,Z] = ode45(@(t,z) rover_trajectory_producing_model(t,z,T,U_in),T,z0) ;
+    k = [w_0;psi_end;v_des];
+    
+    [~,Z] = ode45(@(t,z) rover_trajectory_producing_model(t,z,k,t_f),T,z0) ;
 
     % append velocity and wheelangle to (x,y,h) trajectory to make it a full-state
     % trajectory for the rover
