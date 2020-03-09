@@ -13,7 +13,7 @@ clear
 % Author: Sean Vaskov
 % Created: 06 March 2020
 
-g_degree = 2;
+g_degree = 3;
 
 %% user parameters
 % initial condition bounds (recall that the state is (x,y,h,v), but the
@@ -37,7 +37,7 @@ psi_end_max = 0.5; %rad
 delta_v = 1.0 ; % m/s
 
 % number of samples in v0, w, and v
-N_samples = 4 ;
+N_samples = 2 ;
 
 % timing
 t_sample = 0.01 ;
@@ -84,9 +84,15 @@ T_data = unique([0:t_sample:t_f,t_f]) ;
 % initialize arrays for saving tracking error; note there will be one row
 % for every (v0,w_des,v_des) combination, so there are N_samples^3 rows
 N_total = N_samples^5;
-v_data = nan(N_total,length(T_data)) ;
-w_data = nan(N_total,length(T_data)) ;
-vy_data = nan(N_total,length(T_data)) ;
+psi_data = nan(N_total,length(T_data));
+ev_data = nan(N_total,length(T_data)) ;
+ew_data = nan(N_total,length(T_data)) ;
+evy_data = nan(N_total,length(T_data)) ;
+v_des_data = nan(N_total,length(T_data));
+w0_des_data = nan(N_total,length(T_data));
+psi_end_data = nan(N_total,length(T_data));
+
+
 %% tracking error computation loop
 err_idx = 1 ;
 
@@ -143,19 +149,21 @@ for v0 = v0_vec
                     w_1 = A.wheelangle_to_yawrate(z_1(4,:),z_1(5,:)); 
                     vy_1 = A.wheelangle_to_lateral_veloctity(z_1(4,:),z_1(5,:));
                     
+                    %store velocity error data
+                    ew_data(err_idx,:) = w_1-w_go;
+                    ev_data(err_idx,:) = ve_1;
+                    evy_data(err_idx,:) =vy_1-vy_go;
                     
-                    w_data(err_idx,:) = abs(w_1-w_go);
-                    v_data(err_idx,:) = abs(ve_1);
-                    vy_data(err_idx,:) = abs(vy_1-vy_go);
+                    %store state and parameter data
+                    psi_data(err_idx,:) = z_1(3,:);
+                    v_des_data(err_idx,:) = v_des*ones(length(T_data),1);
+                    w0_des_data(err_idx,:) =  w0_des*ones(length(T_data),1);
+                    psi_end_data(err_idx,:) = psi_end*ones(length(T_data),1);
+                    
                     % increment counter
                     err_idx = err_idx + 1 ;
                     
-%                     cla 
-%                     plot(z_1(1,:),z_1(2,:))
-%                     hold on
-%                     plot(Z_go(1,:),Z_go(2,:))
-%                     pause
-%                     
+
                     if mod(err_idx,10) == 0
                         disp(['Iteration ',num2str(err_idx),' out of ',num2str(N_samples^5)])
                     end
@@ -171,68 +179,116 @@ toc
 
 %% fit g with a polynomial
 % get the max of the error
-v_err = max(v_data,[],1) ;
-w_err = max(w_data,[],1) ;
-vy_err = max(vy_data,[],1);
+v_cos_err_col = abs((ev_data(:)').*cos(psi_data(:)'));
+v_sin_err_col = abs((ev_data(:)').*sin(psi_data(:)'));
+
+vy_cos_err_col = abs((evy_data(:)').*cos(psi_data(:)'));
+vy_sin_err_col = abs((evy_data(:)').*sin(psi_data(:)'));
+
+w_err_col = abs(ew_data(:)');
+
+t = msspoly('t',1);
+z = msspoly('z',3);
+k = msspoly('k',3);
+
+K_data_col = [w0_des_data(:)';psi_end_data(:)';v_des_data(:)'];
+T_data_col = repmat(T_data,[N_total,1]);
+T_data_col = T_data_col(:)';
+psi_data_col = psi_data(:)';
 
 % fit polynomials to the max data
-g_v = polyfit(T_data,v_err,g_degree) ;
-g_vy_coeffs = polyfit(T_data,vy_err,g_degree) ;
-g_w_coeffs = polyfit(T_data,w_err,g_degree) ;
+g_v_cos =  fit_bounding_polynomial_from_samples(v_cos_err_col, [T_data_col;psi_data_col;K_data_col] ,[t;z(3);k],g_degree);
+g_v_sin =  fit_bounding_polynomial_from_samples(v_sin_err_col, [T_data_col;psi_data_col;K_data_col] ,[t;z(3);k],g_degree);
 
+g_vy_cos = fit_bounding_polynomial_from_samples(vy_cos_err_col,[T_data_col;psi_data_col;K_data_col] ,[t;z(3);k],g_degree);
+g_vy_sin = fit_bounding_polynomial_from_samples(vy_sin_err_col,[T_data_col;psi_data_col;K_data_col] ,[t;z(3);k],g_degree);
 
-%% evaluate polynomial for plotting
-g_v_plot = polyval(g_v_coeffs,T_data ) ;
-g_vy_plot = polyval(g_vy_coeffs,T_data);
-g_w_plot = polyval(g_w_coeffs,T_data ) ;
-
-%% reconfigure polynomials to be greater than all data points
-g_v_coeffs(end) = g_v_coeffs(end) + max(g_v_plot-v_err);
-g_v_plot = polyval(g_v_coeffs,T_data ) ;
-
-g_vy_coeffs(end) = g_vy_coeffs(end) + max(g_vy_plot-vy_err);
-g_vy_plot = polyval(g_vy_coeffs,T_data ) ;
-
-g_w_coeffs(end) = g_w_coeffs(end) + max(g_w_plot-w_err);
-g_w_plot = polyval(g_w_coeffs,T_data ) ;
+g_w = fit_bounding_polynomial_from_samples(w_err_col, [T_data_col;K_data_col] ,[t;k],g_degree);
 
 
 %% save data
-filename = ['rover_error_functions_v0_',...
+
+filename = ['rover_nd_error_functions_v0_',...
             num2str(v0_min,'%0.1f'),'_to_',...
             num2str(v0_max,'%0.1f'),'.mat'] ;
-save(filename,'g_v_coeffs','g_vy_coeffs','g_w_coeffs','delta0_min','delta0_max','psi_end_min','psi_end_max',...
+save(filename,'t','z','k','g_v_cos','g_v_sin','g_vy_cos','g_vy_sin','g_w','delta0_min','delta0_max','psi_end_min','psi_end_max',...
      'delta_v','v0_min','v0_max','w0_des_min','w0_des_max','v_des_min','v_des_max') ;
 
-%% plotting
+
+ 
+ 
+ %% plotting
+ N_plot = 10;
+ 
+ plot_idxs = randi(N_total,[N_plot,1]);
+ plot_colors = rand([N_plot,3]);
+ 
+ for i = 1:N_plot
 figure(1) ;
+hold on
+
+K_data_plot = [w0_des_data(plot_idxs(i),:);psi_end_data(plot_idxs(i),:);v_des_data(plot_idxs(i),:)];
+
+% evaluate polynomial for plotting at random parameter
+g_v_cos_plot = msubs(g_v_cos,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]) ;
+g_v_sin_plot = msubs(g_v_sin,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]) ;
+
+g_vy_cos_plot = msubs(g_vy_cos,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]);
+g_vy_sin_plot = msubs(g_vy_sin,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]);
+
+g_w_plot = msubs(g_w,[t;k],[T_data;K_data_plot]) ;
 
 % plot v error
-subplot(3,1,1) ; hold on ;
-plot(T_data,v_data','b:')
-g_v_handle = plot(T_data,g_v_plot,'r-','LineWidth',1.5) ;
-title('error in velocity')
-xlabel('time [s]')
-ylabel('velocity error [m]')
-legend(g_v_handle,' g_v(t) dt','Location','NorthWest')
-set(gca,'FontSize',15)
+subplot(3,2,1) ; hold on ;
+plot(T_data,abs(ev_data(plot_idxs(i),:).*cos(psi_data(plot_idxs(i),:))),'*','Color',plot_colors(i,:))
+plot(T_data,g_v_cos_plot,'Color',plot_colors(i,:),'LineWidth',1.0) ;
+
+subplot(3,2,2) ; hold on ;
+plot(T_data,abs(ev_data(plot_idxs(i),:).*sin(psi_data(plot_idxs(i),:))),'*','Color',plot_colors(i,:))
+plot(T_data,g_v_sin_plot,'Color',plot_colors(i,:),'LineWidth',1.0) ;
+
 
 % plot vy error
-subplot(3,1,2) ; hold on ;
-plot(T_data,vy_data','b:')
-g_vy_handle = plot(T_data,g_vy_plot,'r-','LineWidth',1.5) ;
-title('error in lateral velocity')
-xlabel('time [s]')
-ylabel('velocity error [m]')
-legend(g_vy_handle,' g_vy(t) dt','Location','NorthWest')
-set(gca,'FontSize',15)
+subplot(3,2,3) ; hold on ;
+plot(T_data,abs(evy_data(plot_idxs(i),:).*cos(psi_data(plot_idxs(i),:))),'*','Color',plot_colors(i,:))
+plot(T_data,g_vy_cos_plot,'Color',plot_colors(i,:),'LineWidth',1.0) ;
+
+subplot(3,2,4) ; hold on ;
+plot(T_data,abs(evy_data(plot_idxs(i),:).*sin(psi_data(plot_idxs(i),:))),'*','Color',plot_colors(i,:))
+plot(T_data,g_vy_sin_plot,'Color',plot_colors(i,:),'LineWidth',1.0) ;
+
 
 % plot w error
-subplot(3,1,3) ; hold on ;
-plot(T_data,w_data','b:')
-g_w_handle = plot(T_data,g_w_plot,'r-','LineWidth',1.5) ;
-title('error in yawrate')
+subplot(3,2,5) ; hold on ;
+plot(T_data,abs(ew_data(plot_idxs(i),:)),'*','Color',plot_colors(i,:))
+plot(T_data,g_w_plot,'Color',plot_colors(i,:),'LineWidth',1.0) ;
+
+ end
+ 
+ % plot v error
+subplot(3,2,1) ; hold on ;
 xlabel('time [s]')
-ylabel('yawrate error [m]')
-legend(g_w_handle,'g_w(t) dt','Location','NorthWest')
-set(gca,'FontSize',15)
+ylabel('vcos(\psi) error [m/s]')
+set(gca,'FontSize',12)
+
+subplot(3,2,2) ; hold on ;
+xlabel('time [s]')
+ylabel('vsin(\psi) error [m/s]')
+set(gca,'FontSize',12)
+
+% plot vy error
+subplot(3,2,3) ; hold on ;
+xlabel('time [s]')
+ylabel('v_ycos(\psi) error [m/s]')
+set(gca,'FontSize',12)
+
+subplot(3,2,4) ; hold on ;
+xlabel('time [s]')
+ylabel('v_ysin(\psi) error [m/s]')
+set(gca,'FontSize',12)
+
+% plot w error
+subplot(3,2,5) ; hold on ;
+xlabel('time [s]')
+ylabel('yawrate error [rad/s]')
+set(gca,'FontSize',12)

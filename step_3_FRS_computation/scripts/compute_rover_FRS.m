@@ -18,7 +18,7 @@ include_tracking_error = true;
 v_0_range = [1.0, 2.0] ;
 
 % whether or not to save output
-save_result = true;
+save_result = false;
 
 %% automated from here
 % load timing
@@ -55,15 +55,17 @@ v_des =    (v_des_max-v_des_min)/2*(k(3)+1)+v_des_min;
 
 % create polynomials that are positive on Z, and K, thereby
 % defining them as semi-algebraic sets; h_T is automatically generated
-hZ = (z + ones(3,1)).*(ones(3,1) - z);
+% hZ = (z + ones(3,1)).*(ones(3,1) - z);
 
-hK = [(k + ones(3,1)).*(ones(3,1) - k);...
-        w0_des-(-w0_des_min/psi_end_max*psi_end+w0_des_min);...
-        (w0_des_max/-psi_end_min*psi_end+w0_des_max) - w0_des];
+% hK = [(k + ones(3,1)).*(ones(3,1) - k);...
+%         w0_des-(-w0_des_min/psi_end_max*psi_end+w0_des_min);...
+%         (w0_des_max/-psi_end_min*psi_end+w0_des_max) - w0_des];
 
-hZ0 = [x^2;y^2;psi^2];
+ hK = [sqrt(2)-k(1)^2-k(2)^2;...
+         w0_des-(-w0_des_min/psi_end_max*psi_end+w0_des_min);...
+         (w0_des_max/-psi_end_min*psi_end+w0_des_max) - w0_des];
 
-
+% hZ0 = [x^2;y^2;psi^2];
 
 %% specify dynamics and error function
 cos_psi = 1-psi^2/2;
@@ -103,13 +105,13 @@ solver_input_problem(i).t = t ;
 solver_input_problem(i).z = z([i, 3]) ;
 solver_input_problem(i).k = k ;
 solver_input_problem(i).f = f([i, 3]) ;
-solver_input_problem(i).hZ = hZ([i, 3]) ;
-solver_input_problem(i).hZ0 = hZ0([i, 3]);
+solver_input_problem(i).hZ = sqrt(2)-z(i)^2-z(3)^2 ;
+solver_input_problem(i).hZ0 = -z(i)^2-z(3)^2 ;
 solver_input_problem(i).hK = hK ;
 solver_input_problem(i).cost = int_TZK{i} ;
 solver_input_problem(i).degree = degree ;
 solver_input_problem(i).FRS_states = [t;z(i);k];
-solver_input_problem(i).hFRS_states = [t*(1-t);hZ(i);hK(1:3)];
+solver_input_problem(i).hFRS_states = [t*(1-t);sqrt(2)-z(i)^2;hK(1)];
 
 if include_tracking_error
     solver_input_problem(i).g = g([i,3],:) ;
