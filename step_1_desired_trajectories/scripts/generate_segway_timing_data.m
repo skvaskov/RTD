@@ -4,7 +4,7 @@
 %
 % Author: Shreyas Kousik
 % Created: 10 Mar 2020
-% Updated: nah
+% Updated: 11 Mar 2020
 %
 %% user parameters
 % amount of time to spend per planning iteration
@@ -12,6 +12,9 @@ t_plan = 0.5 ; % s
 
 % maximum allowed change in the segway's speed
 delta_v = 0.5 ; % m/s
+
+% whether or not to save data
+save_data_flag = false ;
 
 %% automated from here
 % make segway agent
@@ -30,13 +33,14 @@ for v_0 = v_0_vec
     % get stopping time for current t_stop
     t_stop = v_0/A.max_accel ;
     
-    % set up braking trajectoryt
+    % set up braking trajectory
+    w_0 = 0 ;
     w_des = 0 ;
     v_des = v_0 ;
     [T_brk,U_brk,Z_brk] = make_segway_braking_trajectory(t_plan,t_stop,w_des,v_des) ;
     
     % track braking trajectory
-    z0 = [0;0;0;v_0] ;
+    z0 = [0;0;0;w_0;v_0] ;
     A.reset(z0)
     A.move(T_brk(end)+t_extra,T_brk,U_brk,Z_brk) ;
     
@@ -60,8 +64,10 @@ v_begin_braking = v_0_all + delta_v.*[1 1 0] ;
 t_f_all = match_trajectories(v_begin_braking,v_0_vec,t_stop_vec) + t_plan ;
 
 %% save timing
-save('segway_timing.mat','t_plan','t_f_all',...
-    'v_0_all','v_begin_braking','delta_v') ;
+if save_data_flag
+    save('segway_timing.mat','t_plan','t_f_all',...
+        'v_0_all','v_begin_braking','delta_v') ;
+end
 
 %% plot v_0 vs d
 figure(1) ; clf ; hold on ; grid on ;
