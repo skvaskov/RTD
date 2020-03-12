@@ -20,8 +20,6 @@ v_0_range = [1.0, 2.0] ;
 % whether or not to save output
 save_result = true;
 
-
-
 %% automated from here
 % load timing
 load('rover_timing.mat')
@@ -38,11 +36,6 @@ end
 % create agent to use for footprint
 A = RoverAWD ;
 
-box_param = sqrt(3)/3;
-radius_param = 1;
-
-box_state = sqrt(2)/2;
-radius_state = 1;
 
 %% set up the FRS computation variables and dynamics
 % set up the indeterminates
@@ -56,23 +49,23 @@ y = zscale(2)*z(2)-zoffset(2);
 psi = zscale(3)*z(3)-zoffset(3);
 
 %unscaled parameters
-w0_des =   (w0_des_max-w0_des_min)/(2*box_param)*(k(1)+box_param)+w0_des_min;
-psi_end =  (psi_end_max-psi_end_min)/(2*box_param)*(k(2)+box_param)+psi_end_min;
-v_des =    (v_des_max-v_des_min)/(2*box_param)*(k(3)+box_param)+v_des_min;
+w0_des =   (w0_des_max-w0_des_min)/2*(k(1)+1)+w0_des_min;
+psi_end =  (psi_end_max-psi_end_min)/2*(k(2)+1)+psi_end_min;
+v_des =    (v_des_max-v_des_min)/2*(k(3)+1)+v_des_min;
 
 
 % create polynomials that are positive on Z, and K, thereby
 % defining them as semi-algebraic sets; h_T is automatically generated
-hK = [radius_param-k(1)^2-k(2)^2-k(3)^2;...
+hK = [(k+1).*(1-k);...
          w0_des-(-w0_des_min/psi_end_max*psi_end+w0_des_min);...
          (w0_des_max/-psi_end_min*psi_end+w0_des_max) - w0_des];
      
 
-hZ{1} = radius_state-z(1)^2-z(3)^2 ;
-hZ{2} = radius_state-z(2)^2-z(3)^2 ;
+hZ = (z+1).*(1-z);
 
-hZ0{1} = -x^2-psi^2;
-hZ0{2} = -y^2-psi^2;
+hZ0 = msspoly(zeros(2,1));
+hZ0(1) = -x^2-psi^2;
+hZ0(2) = -y^2-psi^2;
 
 %% specify dynamics and error function
 cos_psi = 1-psi^2/2;
@@ -103,8 +96,8 @@ g = [scale,scale].*[g_v_cos, -g_vy_sin;...
 
 %% create cost function
 % this time around, we care about the indicator function being on Z x K
-int_TZK{1} = boxMoments([t;z(1);k], [0;-box_state;-box_param*ones(3,1)], [1;box_state;box_param*ones(3,1)]);
-int_TZK{2} = boxMoments([t;z(2);k], [0;-box_state;-box_param*ones(3,1)], [1;box_state;box_param*ones(3,1)]);
+int_TZK{1} = boxMoments([t;z(1);k], [0;-ones(4,1)], ones(5,1));
+int_TZK{2} = boxMoments([t;z(2);k], [0;-ones(4,1)], ones(5,1));
 
 
 %% setup the problem structure for x and y
@@ -113,13 +106,13 @@ solver_input_problem(i).t = t ;
 solver_input_problem(i).z = z([i, 3]) ;
 solver_input_problem(i).k = k ;
 solver_input_problem(i).f = f([i, 3]) ;
-solver_input_problem(i).hZ = hZ{i};
-solver_input_problem(i).hZ0 = hZ0{i};
+solver_input_problem(i).hZ = hZ([i,3]);
+solver_input_problem(i).hZ0 = hZ0(i);
 solver_input_problem(i).hK = hK ;
 solver_input_problem(i).cost = int_TZK{i} ;
 solver_input_problem(i).degree = degree ;
 solver_input_problem(i).FRS_states = [t;z(i);k];
-solver_input_problem(i).hFRS_states = [t*(1-t);radius_state-z(i)^2;hK(1)];
+solver_input_problem(i).hFRS_states = [t*(1-t);1-z(i)^2;hK(1:3)];
 
 if include_tracking_error
     solver_input_problem(i).g = g([i,3],:) ;
@@ -143,12 +136,12 @@ FRS_lyapunov_function_y = solver_output(2).lyapunov_function ;
 %% save result
 if save_result
     % create the filename for saving
-    filename = ['rover_FRS_deg_',num2str(degree),'_v0_',...
+    filename = ['rover_FRS_rect_deg_',num2str(degree),'_v0_',...
                 num2str(v0_min,'%0.1f'),'_to_',...
                 num2str(v0_max,'%0.1f'),'.mat'] ;
 
     % save output
     disp(['Saving FRS output to file: ',filename])
     save(filename,'FRS_polynomial*','FRS_lyapunov_function*','t','z','k',...
-        'f','g','t_plan','degree','solver_input_problem','*_param','*_state')
+        'f','g','t_plan','degree','solver_input_problem')
 end

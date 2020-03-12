@@ -12,7 +12,6 @@ clear
 %
 % Author: Sean Vaskov
 % Created: 06 March 2020
-
 g_degree = 3;
 
 %% user parameters
@@ -37,7 +36,7 @@ psi_end_max = 0.5; %rad
 delta_v = 1.0 ; % m/s
 
 % number of samples in v0, w, and v
-N_samples = 2 ;
+N_samples = 5 ;
 
 % timing
 t_sample = 0.01 ;
@@ -84,12 +83,13 @@ T_data = unique([0:t_sample:t_f,t_f]) ;
 % initialize arrays for saving tracking error; note there will be one row
 % for every (v0,w_des,v_des) combination, so there are N_samples^3 rows
 N_total = N_samples^5;
-psi_data = nan(N_total,length(T_data));
 
 ev_cos_data = nan(N_total,length(T_data)) ;
 ev_sin_data = nan(N_total,length(T_data)) ;
 evy_cos_data = nan(N_total,length(T_data)) ;
 evy_sin_data = nan(N_total,length(T_data)) ;
+
+psi_data = nan(N_total,length(T_data));
 
 v_des_data = nan(N_total,length(T_data));
 w0_des_data = nan(N_total,length(T_data));
@@ -160,7 +160,8 @@ for v0 = v0_vec
                     evy_cos_data(err_idx,:) = vy_1.*cos(z_1(3,:))-vy_cos_go;
                     evy_sin_data(err_idx,:) = vy_1.*sin(z_1(3,:))-vy_sin_go;
                     
-
+                    %store state error data
+                    psi_data(err_idx,:) = z_1(3,:);
                     
                     %store state and parameter data
                     v_des_data(err_idx,:) = v_des*ones(length(T_data),1);
@@ -193,19 +194,19 @@ vy_cos_err_col = abs(evy_cos_data(:)');
 vy_sin_err_col = abs((evy_sin_data(:)'));
 
 t = msspoly('t',1);
+z = msspoly('z',3);
 k = msspoly('k',3);
 
 K_data_col = [w0_des_data(:)';psi_end_data(:)';v_des_data(:)'];
 T_data_col = repmat(T_data,[N_total,1]);
 T_data_col = T_data_col(:)';
 
-
 % fit polynomials to the max data
-g_v_cos =  fit_bounding_polynomial_from_samples(v_cos_err_col, [T_data_col;K_data_col] ,[t;k],g_degree);
-g_v_sin =  fit_bounding_polynomial_from_samples(v_sin_err_col, [T_data_col;K_data_col] ,[t;k],g_degree);
+g_v_cos =  fit_bounding_polynomial_from_samples(v_cos_err_col, [T_data_col;psi_data(:)';K_data_col] ,[t;z(3);k],g_degree);
+g_v_sin =  fit_bounding_polynomial_from_samples(v_sin_err_col, [T_data_col;psi_data(:)';K_data_col] ,[t;z(3);k],g_degree);
 
-g_vy_cos = fit_bounding_polynomial_from_samples(vy_cos_err_col,[T_data_col;K_data_col] ,[t;k],g_degree);
-g_vy_sin = fit_bounding_polynomial_from_samples(vy_sin_err_col,[T_data_col;K_data_col] ,[t;k],g_degree);
+g_vy_cos = fit_bounding_polynomial_from_samples(vy_cos_err_col,[T_data_col;psi_data(:)';K_data_col] ,[t;z(3);k],g_degree);
+g_vy_sin = fit_bounding_polynomial_from_samples(vy_sin_err_col,[T_data_col;psi_data(:)';K_data_col] ,[t;z(3);k],g_degree);
 
 
 
@@ -214,7 +215,7 @@ g_vy_sin = fit_bounding_polynomial_from_samples(vy_sin_err_col,[T_data_col;K_dat
 filename = ['rover_pos_error_functions_v0_',...
             num2str(v0_min,'%0.1f'),'_to_',...
             num2str(v0_max,'%0.1f'),'.mat'] ;
-save(filename,'t','k','g_v_cos','g_v_sin','g_vy_cos','g_vy_sin','delta0_min','delta0_max','psi_end_min','psi_end_max',...
+save(filename,'t','z','k','g_v_cos','g_v_sin','g_vy_cos','g_vy_sin','delta0_min','delta0_max','psi_end_min','psi_end_max',...
      'delta_v','v0_min','v0_max','w0_des_min','w0_des_max','v_des_min','v_des_max') ;
 
 
@@ -233,11 +234,11 @@ hold on
 K_data_plot = [w0_des_data(plot_idxs(i),:);psi_end_data(plot_idxs(i),:);v_des_data(plot_idxs(i),:)];
 
 % evaluate polynomial for plotting at random parameter
-g_v_cos_plot = msubs(g_v_cos,[t;k],[T_data;K_data_plot]) ;
-g_v_sin_plot = msubs(g_v_sin,[t;k],[T_data;K_data_plot]) ;
+g_v_cos_plot = msubs(g_v_cos,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]) ;
+g_v_sin_plot = msubs(g_v_sin,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]) ;
 
-g_vy_cos_plot = msubs(g_vy_cos,[t;k],[T_data;K_data_plot]);
-g_vy_sin_plot = msubs(g_vy_sin,[t;k],[T_data;K_data_plot]);
+g_vy_cos_plot = msubs(g_vy_cos,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]);
+g_vy_sin_plot = msubs(g_vy_sin,[t;z(3);k],[T_data;psi_data(plot_idxs(i),:);K_data_plot]);
 
 
 % plot v error
