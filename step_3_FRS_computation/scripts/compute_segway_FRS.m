@@ -1,0 +1,141 @@
+%% description
+% This script computes a Forward-Reachable Set (FRS) for the sgway. The
+% user specifies the range of initial speeds; all other info is loaded from
+% the relevant .mat files.
+%
+% Note, you need MOSEK and spotless on your MATLAB path to run this script!
+%
+% Author: Shreyas Kousik
+% Created: 10 Mar 2020
+% Updated: -
+
+clear ; clc ; close all ;
+
+%% user parameters
+% degree of SOS polynomial solution
+degree = 6 ; % this should be 6 or less unless you have like 100+ GB of RAM
+
+% whether or not to include tracking error
+include_tracking_error = true ;
+
+% speed range (uncomment one of the following)
+% v_0_range = [0.0, 0.5] ;
+% v_0_range = [0.5, 1.0] ;
+% v_0_range = [1.0, 1.5] ;
+
+% whether or not to save output
+save_data_flag = true ;
+
+%% automated from here
+% load timing
+load('segway_timing.mat')
+
+% load the error functions and distance scales
+switch v_0_range(1)
+    case 0.0
+        load('segway_error_functions_v_0_0.0_to_0.5.mat')
+        load('segway_FRS_scaling_v_0_0.0_to_0.5.mat')
+    case 0.5
+        load('segway_error_functions_v_0_0.5_to_1.0.mat')
+        load('segway_FRS_scaling_v_0_0.5_to_1.0.mat')
+    case 1.0
+        load('segway_error_functions_v_0_1.0_to_1.5.mat')
+        load('segway_FRS_scaling_v_0_1.0_to_1.5.mat')
+    otherwise
+        error('Please pick a valid speed range for the segway FRS!')
+end
+
+% create agent to use for footprint
+A = segway_agent() ;
+footprint = A.footprint ;
+
+%% set up the FRS computation variables and dynamics
+% set up the indeterminates
+t = msspoly('t', 1) ; % time t \in T
+z = msspoly('z', 2) ; % state z = (x,y) \in Z
+k = msspoly('k', 2) ; % parameters k \in K
+
+x = z(1) ; y = z(2) ;
+
+% create polynomials that are positive on Z, and K, thereby
+% defining them as semi-algebraic sets; h_T is automatically generated
+Z_range = [-1, 1 ; -1, 1] ; % z \in [-1,1]^2
+
+Z0_radius = footprint/distance_scale ; % z(0) \in Z_0
+
+K_range = [-1, 1 ; -1, 1] ; % k \in [-1,1]^2
+
+h_Z = (z - Z_range(:,1)).*(Z_range(:,2) - z) ;
+
+h_Z0 = 1 - ((x - initial_x)/(footprint/distance_scale)).^2 + ...
+         - ((y - initial_y)/(footprint/distance_scale)).^2 ;
+
+h_K = (k - K_range(:,1)).*(K_range(:,2) - k) ;
+
+%% specify dynamics and error function
+% set up w_des in terms of k_1
+w_des = w_max*k(1) ;
+
+% set up v_des in terms of k_2
+v_range = [v_0_min - delta_v, v_0_max + delta_v] ;
+v_range = bound_values(v_range,[0, max_speed]) ;
+v_des = (diff(v_range)/2)*k(2) + mean(v_range) ;
+
+% create dynamics
+scale = (time_scale/distance_scale) ;
+f = scale*[v_des - distance_scale*w_des*(y - initial_y) ;
+                 + distance_scale*w_des*(x - initial_x)] ;
+
+% create tracking error dynamics; first, make the monomials of time in
+% decreasing power order
+g_x_t_vec = t.^(length(g_x_coeffs)-1:-1:0) ;
+g_y_t_vec = t.^(length(g_y_coeffs)-1:-1:0) ;
+g = scale*[g_x_t_vec*g_x_coeffs', 0 ;
+           0, g_y_t_vec*g_y_coeffs'] ;
+
+%% create cost function
+% this time around, we care about the indicator function being on Z x K
+int_ZK = boxMoments([z;k], [Z_range(:,1);K_range(:,1)], [Z_range(:,2);K_range(:,2)]);
+
+%% setup the problem structure
+solver_input_problem.t = t ;
+solver_input_problem.z = z ;
+solver_input_problem.k = k ;
+solver_input_problem.f = f ;
+solver_input_problem.hZ = h_Z ;
+solver_input_problem.hZ0 = h_Z0 ;
+solver_input_problem.hK = h_K ;
+solver_input_problem.cost = int_ZK ;
+solver_input_problem.degree = degree ;
+
+if include_tracking_error
+    solver_input_problem.g = g ;
+end
+
+%% compute FRS without tracking error
+solve_time = tic ;
+solver_output = compute_FRS(solver_input_problem) ;
+solve_time = toc(solve_time) ;
+
+%% extract FRS polynomial result
+FRS_polynomial = solver_output.indicator_function ;
+FRS_lyapunov_function = solver_output.lyapunov_function ;
+
+%% save result
+if save_data_flag
+    % create the filename for saving
+    filename = ['segway_FRS_deg_',num2str(degree),'_v_0_',...
+                num2str(v_0_min,'%0.1f'),'_to_',...
+                num2str(v_0_max,'%0.1f'),'.mat'] ;
+
+    
+    disp(['Saving FRS output to file: ',filename])
+    
+    % save output
+    save(filename,'FRS_polynomial','FRS_lyapunov_function','t','z','k',...
+        'time_scale','distance_scale',...
+        'v_0_min','v_0_max','v_des','w_des',...
+        'max_speed','footprint','f','g','initial_x','initial_y',...
+        't_plan','v_range','delta_v','degree','h_Z','h_Z0','h_K',...
+        'w_max','w_min')
+end
