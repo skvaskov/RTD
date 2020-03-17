@@ -4,7 +4,7 @@
 %
 % Author: Shreyas Kousik
 % Created: 10 Mar 2020
-% Updated: -
+% Updated: 12 Mar 2020
 %
 %% user parameters
 % uncomment one of the following lines to load the relevant error function
@@ -87,7 +87,11 @@ for w_0 = w_0_range
 end
 
 % find the distance scale
-distance_scale = max(distance_scale_x,distance_scale_y) + 2*A.footprint ;
+if v_0_min == 0.0
+    distance_scale = max(distance_scale_x,distance_scale_y) + 3*A.footprint ;
+else
+    distance_scale = max(distance_scale_x,distance_scale_y) + 2*A.footprint ;
+end
 disp(['Distance scale found: ',num2str(distance_scale,'%0.2f')])
 
 % set the (x0,y0) offset so that x0 lies at -0.5, since the dynamics are

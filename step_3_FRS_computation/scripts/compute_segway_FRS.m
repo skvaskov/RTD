@@ -7,24 +7,27 @@
 %
 % Author: Shreyas Kousik
 % Created: 10 Mar 2020
-% Updated: -
+% Updated: 14 Mar 2020
 
 clear ; clc ; close all ;
 
 %% user parameters
 % degree of SOS polynomial solution
-degree = 6 ; % this should be 6 or less unless you have like 100+ GB of RAM
+degree = 10 ; % this should be 6 or less unless you have like 100+ GB of RAM
 
 % whether or not to include tracking error
 include_tracking_error = true ;
 
 % speed range (uncomment one of the following)
-% v_0_range = [0.0, 0.5] ;
+v_0_range = [0.0, 0.5] ;
 % v_0_range = [0.5, 1.0] ;
 % v_0_range = [1.0, 1.5] ;
 
 % whether or not to save output
 save_data_flag = true ;
+
+% whether or not to run the solver
+run_solver_flag = false ; 
 
 %% automated from here
 % load timing
@@ -112,23 +115,28 @@ if include_tracking_error
     solver_input_problem.g = g ;
 end
 
-%% compute FRS without tracking error
-solve_time = tic ;
-solver_output = compute_FRS(solver_input_problem) ;
-solve_time = toc(solve_time) ;
+%% create filename for saving
+filename = ['segway_FRS_deg_',num2str(degree),'_v_0_',...
+    num2str(v_0_min,'%0.1f'),'_to_',...
+    num2str(v_0_max,'%0.1f'),'.mat'] ;
 
-%% extract FRS polynomial result
-FRS_polynomial = solver_output.indicator_function ;
-FRS_lyapunov_function = solver_output.lyapunov_function ;
+%% compute FRS without tracking error
+if run_solver_flag
+    disp('Running solver to compute FRS!')
+    solve_time = tic ;
+    solver_output = compute_FRS(solver_input_problem) ;
+    solve_time = toc(solve_time) ;
+    
+    % extract FRS polynomial result
+    FRS_polynomial = solver_output.indicator_function ;
+    FRS_lyapunov_function = solver_output.lyapunov_function ;
+else
+    disp('Not running solver! Loading existing FRS instead.')
+    load(filename)
+end
 
 %% save result
 if save_data_flag
-    % create the filename for saving
-    filename = ['segway_FRS_deg_',num2str(degree),'_v_0_',...
-                num2str(v_0_min,'%0.1f'),'_to_',...
-                num2str(v_0_max,'%0.1f'),'.mat'] ;
-
-    
     disp(['Saving FRS output to file: ',filename])
     
     % save output
@@ -137,5 +145,5 @@ if save_data_flag
         'v_0_min','v_0_max','v_des','w_des',...
         'max_speed','footprint','f','g','initial_x','initial_y',...
         't_plan','v_range','delta_v','degree','h_Z','h_Z0','h_K',...
-        'w_max','w_min')
+        'w_max','w_min','delta_w')
 end
