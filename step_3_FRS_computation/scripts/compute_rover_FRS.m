@@ -83,7 +83,7 @@ scale = (t_f./zscale) ;
 
 w_slope =  -2*(t_f*w0_des-psi_end)/t_f^2;
 
-w_des = w_slope*t_f*t+w0_des;
+w_des = w_slope*T*t+w0_des;
 
 f = scale.*[v_des*cos_psi-A.rear_axel_to_center_of_mass*w_des*sin_psi;...
             v_des*sin_psi+A.rear_axel_to_center_of_mass*w_des*cos_psi;...
@@ -91,11 +91,11 @@ f = scale.*[v_des*cos_psi-A.rear_axel_to_center_of_mass*w_des*sin_psi;...
 
 % create tracking error dynamics; first, make msspoly functions for the
 % velocity errors
-g_v_cos = subs(g_v_cos,[t;z;k],[t_f*t;x;y;psi;w0_des;psi_end;v_des]);
-g_v_sin = subs(g_v_sin,[t;z;k],[t_f*t;x;y;psi;w0_des;psi_end;v_des]);
+g_v_cos = subs(g_v_cos,[t;z;k],[T*t;x;y;psi;w0_des;psi_end;v_des]);
+g_v_sin = subs(g_v_sin,[t;z;k],[T*t;x;y;psi;w0_des;psi_end;v_des]);
 
-g_vy_cos = subs(g_vy_cos,[t;z;k],[t_f*t;x;y;psi;w0_des;psi_end;v_des]);
-g_vy_sin = subs(g_vy_sin,[t;z;k],[t_f*t;x;y;psi;w0_des;psi_end;v_des]);
+g_vy_cos = subs(g_vy_cos,[t;z;k],[T*t;x;y;psi;w0_des;psi_end;v_des]);
+g_vy_sin = subs(g_vy_sin,[t;z;k],[T*t;x;y;psi;w0_des;psi_end;v_des]);
 
 g = [scale,scale].*[g_v_cos, -g_vy_sin;...
                     g_v_sin, g_vy_cos;...

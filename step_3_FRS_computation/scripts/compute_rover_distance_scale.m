@@ -10,18 +10,14 @@ clear;close
 % uncomment one of the following lines to load the relevant error function
 % data; we'll compute the FRS for that error function
 
- filename = 'rover_pos_error_functions_v0_1.0_to_2.0.mat' ;
-
-
-%% automated from here
 % load timing info
 load('rover_timing.mat')
 
 % load error info
-load(filename)
+load('rover_pos_error_functions_T1.5_v0_0.0_to_1.0_degx3_degy3.mat')
 
-% create the agent
-A = RoverAWD ;
+%% automated from here
+
 
 % define range of initial conditions
 Z0_range = [[0;0;0],[0;0;0]];
@@ -38,15 +34,15 @@ hZ0{2} = @(z,k) (w0_des_max/-psi_end_min*k(2,:)+w0_des_max) - k(1,:);
 f_traj = @(t,z,k) rover_trajectory_producing_model(t,z,k,t_f);
 
 % build g matrix
-g = [g_v_cos,g_v_sin;-g_vy_sin,g_vy_cos;0,0];
+g = [g_v_cos,-g_vy_sin;g_v_sin,g_vy_cos;0,0];
 
 g_traj = msspoly_to_fun(g,{t,z,k});
 
 
-[zscale,zoffset] =get_state_scaling_factors(f_traj,Z0_range,'K_range',K_range,'hZ0',hZ0,'T',t_f,'n_scale',0.6,'g',g_traj,'plotting',true);
+[zscale,zoffset] =get_state_scaling_factors(f_traj,Z0_range,'K_range',K_range,'hZ0',hZ0,'T',T,'n_scale',sqrt(2)/2,'g',g_traj,'plotting',true);
 
 %% save output
-filename = ['rover_FRS_scaling_v0_',...
+scaling_filename = ['rover_FRS_scaling_T',num2str(T,'%0.1f'),'_v0_',...
     num2str(v0_min,'%0.1f'),'_to_',...
-    num2str(v0_max,'%0.1f'),'.mat'] ;
-save(filename,'zscale','zoffset') ;
+    num2str(v0_max,'%0.1f'),'_',date,'.mat'] ;
+save(scaling_filename,'zscale','zoffset') ;

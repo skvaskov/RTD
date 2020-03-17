@@ -18,12 +18,7 @@ classdef rover_RTD_planner < generic_RTD_planner
             P@generic_RTD_planner('lookahead_distance',lookahead_distance,...
                 't_plan',t_plan,'t_move',t_move,varargin{:})
         end
-        
-        function load_FRS_files(P,~,~)
-            FRS_data = cell(1,1) ;
-            FRS_data{1} = load('rover_FRS_deg6_reconstructed_deg6_v0_1.0_to_2.0.mat') ;
-            P.FRS = FRS_data ;
-        end
+    
         
         function setup(P,agent_info,world_info)
             % call superclass setup
@@ -56,10 +51,15 @@ classdef rover_RTD_planner < generic_RTD_planner
             xlo = P.bounds(1) ; xhi = P.bounds(2) ;
             ylo = P.bounds(3) ; yhi = P.bounds(4) ;
             
-            B = [xlo, xhi, xhi, xlo, xlo ;
-                ylo, ylo, yhi, yhi, ylo] ;
+            Bl = [xlo, xhi;
+                ylo, ylo];
             
-            P.bounds_as_obstacle = interpolate_polyline_with_spacing(B(:,end:-1:1),P.point_spacing);
+             Bu = [xlo, xhi;
+                yhi, yhi];
+            
+            
+            P.bounds_as_obstacle = [interpolate_polyline_with_spacing(Bu,P.point_spacing),NaN(2,1),...
+                                    interpolate_polyline_with_spacing(Bl,P.point_spacing)];
 
         end
         
@@ -83,9 +83,9 @@ classdef rover_RTD_planner < generic_RTD_planner
             k = F.k ;
             w = subs(w_full,k(2),psiend);
             
-            z = F.z ;
+            z = [F.x ;F.y];
 
-            P.w_polynomial_info = decompose_w_polynomial(w,z,k) ;
+            P.w_polynomial_info = decompose_w_polynomial(w,z,k([1,3])) ;
             
             % get obstacles; for this planner, we assume the obstacles are
             % handed in as a 2-by-N array of boxes separated by columns of
@@ -102,17 +102,23 @@ classdef rover_RTD_planner < generic_RTD_planner
                 
                 % move obstacles into FRS coordinates for generating nonlinear
                 % constraints with the w polynomial
-                x0 = P.F.xoffset(1);
-                y0 = P.F.xoffset(2);
-                Dx = P.F.xscale(1);
-                Dy = P.F.xscale(2);
+                x0 = F.xoffset(1);
+                y0 = F.xoffset(2);
+                Dx = F.xscale(1);
+                Dy = F.xscale(2);
+               
                 
-                O_FRS = world_to_FRS(O,P.agent_state(1:3),x0,y0,Dx,Dy) ;
+                R = [cos(P.agent_state(3)), -sin(P.agent_state(3)) ;
+                    sin(P.agent_state(3)), cos(P.agent_state(3))] ;
+                
+                O_center =  R'*(O-P.agent_state(1:2));
+                
+                O_FRS = (O_center+[x0;y0])./[Dx;Dy];
                 
                 % get rid of points behind the robot, since we don't let the
                 % segway go backwards, so those points aren't reachable
-                O_log = O_FRS(1,:) >= x0/D ;
-                O_FRS = O_FRS(:,O_log) ;
+%                 O_log = O_FRS(1,:) >= x0/Dx ;
+%                 O_FRS = O_FRS(:,O_log) ;
                 
                 % get rid of obstacle points that are definitely unreachable
                 % because they lie outside of the unit circle in the FRS
@@ -132,6 +138,10 @@ classdef rover_RTD_planner < generic_RTD_planner
         
         %% online planning: cost function
         function create_cost_function(P,agent_info,world_info,start_tic)
+            
+            %get frs
+            F = P.FRS{P.current_FRS_index};
+            
             % create waypoint
             P.create_waypoint(agent_info,world_info,start_tic) ;
             
@@ -140,18 +150,22 @@ classdef rover_RTD_planner < generic_RTD_planner
             
             % rotate waypoint to body-fixed frame
             wp = P.current_waypoint ;
-            wp_local = world_to_local(z(1:3),wp(1:2),...
-                0,0,1) ;
+            wp_local = world_to_local(z(1:3),wp(1:2)) ;
             
             % create cost function
-            w0 = agent_info.state(4,end) ;
-            v0 = agent_info.state(5,end) ;
-            P.trajopt_problem.cost_function = @(k) P.cost_rover(k,w0,v0,wp_local,start_tic) ;
+            w0_max = F.w0_des_max;
+            w0_min = F.w0_des_min;
+            v_max = F.v_des_max;
+            v_min = F.v_des_min;
+
+            P.trajopt_problem.cost_function = @(k) cost_rover(P,k,-z(3),w0_max,w0_min,v_max,v_min,wp_local(1),wp_local(2),start_tic);
         end
         
-        function [c, gc] = cost_segway(P,k,w0,v0,wp_local,start_tic)
-            c = Cfn_segway(w0,v0,wp_local(1),wp_local(2),k(1),k(2)) ;
-            gc = dCfn_segway(w0,v0,wp_local(1),wp_local(2),k(1),k(2)) ;
+        function [c, gc] = cost_rover(P,k,psi_end,w0_max,w0_min,v_max,v_min,x_des,y_des,start_tic)
+            
+            
+            c = rover_cost(k(1),psi_end,k(2),w0_max,w0_min,v_max,v_min,x_des,y_des,1,2);
+            gc = rover_cost_grad(k(1),psi_end,k(2),w0_max,w0_min,v_max,v_min,x_des,y_des,1,2);
             
             if toc(start_tic) > P.t_plan
                 error('Trajopt timed out!')
@@ -162,6 +176,7 @@ classdef rover_RTD_planner < generic_RTD_planner
         function create_constraints(P,start_tic)
             % get the processed obstacles
             O = P.current_obstacles_in_FRS_coords ;
+            F = P.FRS{P.current_FRS_index};
             
             if ~isempty(O)
                 % remove NaNs
@@ -180,21 +195,39 @@ classdef rover_RTD_planner < generic_RTD_planner
                 N = wk.N ;
 
                 % create constraint function
-                P.trajopt_problem.nonlcon_function = @(k) P.nonlcon_segway(k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic) ;
+                P.trajopt_problem.nonlcon_function = @(k) P.nonlcon_rover(k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic) ;
             else
                 % if there are no obstacles then we don't need to consider
                 % any constraints
                 P.trajopt_problem.nonlcon_function = [] ;
             end
             
+            w0_des_max  = F.w0_des_max;
+            w0_des_min = F.w0_des_min;
+            
+            v_des_max = F.v_des_max;
+            v_des_min = F.v_des_min;
+            diff_v = F.diff_v;
+            v0 = P.agent_state(4);
+            
+            psi_end_max = F.psi_end_max;
+            psi_end_min = F.psi_end_min;
+            psi_end = -P.agent_state(3);
+            
+             
             % create the inequality constraints and problem bounds
-            k = P.FRS{P.current_FRS_index}.k ;
-            P.trajopt_problem.Aineq = [] ;
-            P.trajopt_problem.bineq = [] ;
-            P.trajopt_problem.k_bounds = [-ones(size(k)),ones(size(k))] ;
+            P.trajopt_problem.Aineq = -[(w0_des_max/2 - w0_des_min/2) ,0;...
+                                        (w0_des_min/2 - w0_des_max/2),0 ;...
+                                        0,- (v_des_max/2 - v_des_min/2) ;...
+                                        0,- (v_des_min/2 - v_des_max/2) ] ;
+            P.trajopt_problem.bineq = [w0_des_max/2 - w0_des_min/2 + (psi_end*w0_des_min)/psi_end_max;...
+                                       w0_des_max/2 - w0_des_min/2 - (psi_end*w0_des_max)/psi_end_min;...
+                                       -(v_des_min/2 - v0 - diff_v + v_des_max/2 );...
+                                       -(diff_v + v0 - v_des_min/2 - v_des_max/2)] ;
+            P.trajopt_problem.k_bounds = [-ones(2,1),ones(2,1)] ;
         end
         
-        function [n, neq, gn, gneq] = nonlcon_segway(P,k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic)
+        function [n, neq, gn, gneq] = nonlcon_rover(P,k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic)
             % constraint is active when p(k) > 0
             n = eval_w(k,wkcoef,wkpows) ;
             neq = zeros(size(n)) ;
@@ -205,98 +238,87 @@ classdef rover_RTD_planner < generic_RTD_planner
                 error('Trajopt timed out!')
             end
         end
-        
+        %%
+        function create_initial_guess(P,~)
+            % P.create_initial_guess(start_tic)
+            %
+            % By default, set the initial guess for trajopt to the previous k_opt,
+            % or else zeros. This is a useful one to overwrite in a subclass,
+            % probably.
+            
+            k_prev = P.latest_plan.k_opt ;
+            
+            if isempty(k_prev) || any(isnan(k_prev))
+                
+                P.trajopt_problem.initial_guess = zeros(2,1) ;
+            else
+                P.trajopt_problem.initial_guess = k_prev ;
+            end
+        end
+  
         %% online planning: create output given successful replan
-        function [T_out,U_out,Z_out] = create_desired_trajectory(P,~,k_opt)
-            % get desired speed and yaw rate
-            v_max = P.FRS{P.current_FRS_index}.vmax ;
-            v_des = (v_max/2)*k_opt(2) + (v_max/2) ;
+        function [T_out,U_out,Z_out] = create_desired_trajectory(P,agent_info,k_opt)
             
-            w_max = P.FRS{P.current_FRS_index}.wmax ;
-            w_des = w_max*k_opt(1) ;
+            % get current FRS and k
+            F = P.FRS{P.current_FRS_index} ;
+            pose0 = P.agent_state([agent_info.position_indices,agent_info.heading_index]);
+      
+            % get the desired speed and yaw rate
+            w0_des = (F.w0_des_max-F.w0_des_min)/2*(k_opt(1)+1)+F.w0_des_min;
+            v_des = (F.v_des_max-F.v_des_min)/2*(k_opt(2)+1)+F.v_des_min;
+
+            % create the desired trajectory
+            t_stop =  2;
+            [T_out,U_out,Z_out] = make_rover_braking_trajectory(P.t_plan,F.t_f,...
+                                    t_stop,w0_des,-P.agent_state(3),v_des) ;
             
-            % set up timing
-            t_f = P.FRS{P.current_FRS_index}.T ;
-            t_sample = 0.01 ;
-            t_plan = P.t_move ;
-            t_stop = t_f - t_plan ;
-            T_out = unique([0:t_sample:t_f,t_f]);
+            %rotate and place at current position/heading
+            Z_out(1:2,:) = rotation_matrix_2D(pose0(3))*Z_out(1:2,:)+pose0(1:2);
+            Z_out(3,:) = wrapToPi(Z_out(3,:)+pose0(3));
             
-            % constant velocity until t_plan (note t_plan = t_move for real
-            % time planning)
-            phase_1 = @(t,z) [v_des*cos(z(3));v_des*sin(z(3));w_des];
-            
-            % deceleration
-            phase_2 = @(t,z) (1-(t-t_plan)/t_stop)*[v_des*cos(z(3));v_des*sin(z(3));w_des];
-            
-            % compute dubins path trajectories
-            [T_1,X_1] = ode45(@(t,z)phase_1(t,z),[0,t_plan],[0;0;0]);
-            [T_2,X_2] = ode45(@(t,z)phase_2(t,z),[t_plan,t_f],X_1(end,:));
-            Z_out = NaN(5,length(T_1) + length(T_2)) ;
-            Z_out(1:3,:) = [X_1', X_2(2:end,:)', X_2(end,:)'] ;
-            
-            % create speed and yaw rate trajectories
-            v_traj = [repmat(v_des,[1,length(T_1)]),(1-(T_2(2:end-1)'-t_plan)/t_stop)*v_des,0,0];
-            w_traj = [repmat(w_des,[1,length(T_1)]),(1-(T_2(2:end-1)'-t_plan)/t_stop)*w_des,0,0];
-            
-            % make full state trajectories
-            Z_out(4:5,:) = [w_traj;v_traj];
-            
-            % make sure the output trajectory timing is right
-            if T_2(end) ~= t_f
-                Z_out = interp1([T_1;T_2(2:end);t_f],Z_out',T_out)';
-            else
-                Z_out = interp1([T_1;T_2(2:end)],Z_out(:,1:end-1)',T_out)';
-            end
-            
-            % the nominal input is the desired speed and yaw rate
-            U_out = Z_out([4,5],:);
+            %update current plan 
+            P.current_plan = Z_out(1:2,:);
+           
         end
-        
-        %% plotting
-        function plot(P,~)
-            hold_check = false ;
-            if ~ishold
-                hold_check = true ;
-                hold on ;
-            end
+
+        function plot(P,color)
             
-            % plot current obstacles
-            O = P.current_obstacles ;
-            
-            if isempty(O)
-                O = nan(2,1) ;       
+           if nargin<2
+               color = [0 0 1];
+           end
+           
+           plot@generic_RTD_planner(P,color)
+           
+           
+            if P.plot_FRS_flag
+                
+                
+                if ~isnan(P.latest_plan.k_opt)
+                    
+                    k_opt = P.latest_plan.k_opt;
+                    
+                    F = P.FRS{P.latest_plan.current_FRS_index};
+                    
+                    pose0 = P.latest_plan.agent_state(1:3);
+                    
+                    psiend_k2 = (-pose0(3)-F.psi_end_min)*2/(F.psi_end_max-F.psi_end_min)-1;
+                    wx = subs(F.w,F.k,[k_opt(1);psiend_k2;k_opt(2)]);
+                    
+                    h = get_2D_msspoly_contour(wx,[F.x;F.y],1,'Scale',F.xscale,'Offset',-F.xoffset,'pose',pose0);
+                    
+                    if ~check_if_plot_is_available(P,'FRS_contour')
+                        P.plot_data.FRS_contour = line(h(1,:),h(2,:),'Color',[0 0.75 0.25],'LineWidth',1.0);
+                    else
+                        P.plot_data.FRS_contour.XData = h(1,:);
+                        P.plot_data.FRS_contour.YData = h(2,:);
+                    end
+                    
+                end
+                
             end
-            
-            if check_if_plot_is_available(P,'obstacles')
-                P.plot_data.obstacles.XData = O(1,:) ;
-                P.plot_data.obstacles.YData = O(2,:) ;
-            else
-                obs_data = plot(O(1,:),O(2,:),'r.') ;
-                P.plot_data.obstacles = obs_data ;
-            end
-            
-            % plot current waypoint
-            wp = P.current_waypoint ;
-            if isempty(wp)
-                wp = nan(2,1) ;
-            end
-            
-            if check_if_plot_is_available(P,'waypoint')
-                P.plot_data.waypoint.XData = wp(1) ;
-                P.plot_data.waypoint.YData = wp(2) ;
-            else
-                wp_data = plot(wp(1),wp(2),'b*') ;
-                P.plot_data.waypoint = wp_data ;
-            end
-            
-            if hold_check
-                hold off
-            end
+          
         end
-        
-        function plot_at_time(P,~)
-            P.vdisp('Shreyas write this!',10)
-        end
+       
+       
     end
 end
