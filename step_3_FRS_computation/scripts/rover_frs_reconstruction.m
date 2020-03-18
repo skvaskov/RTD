@@ -9,15 +9,14 @@
 clear ; clc ; close all ;
 %% user parameters
 % degree of SOS polynomial solution
-degree_reconstruction = 6; %this is the degree of the final (w) reachset
+degree_reconstruction = 8; %this is the degree of the final (w) reachset
 
 % load timing and relavent files
 load('rover_timing.mat')
 
 % load the error functions and distance scales
-load('rover_pos_error_functions_T1.5_v0_1.0_to_2.0_degx3_degy3.mat')
-load('rover_FRS_scaling_T1.5_v0_1.0_to_2.0.mat')
-load('rover_FRS_rect_T1.5_deg6_v0_1.0_to_2.0.mat')
+load('rover_FRS_scaling_T1.5_v0_1.0_to_2.0_16-Mar-2020.mat')
+load('rover_FRS_rect_T1.5_deg8_v0_1.0_to_2.0_17-Mar-2020.mat')
   
 
 
@@ -53,7 +52,7 @@ xc_unscaled = zscale(1)*z(1)-zoffset(1);
 yc_unscaled = zscale(2)*z(2)-zoffset(2);
 
 X_range = [-zscale(1:2)-zoffset(1:2),zscale(1:2)-zoffset(1:2)];
-X_range = X_range+[L;W];
+X_range = X_range+sqrt(2)*[L;W];
 
 xscale = (X_range(:,2)-X_range(:,1))/2;
 xoffset = -(X_range(:,2)+X_range(:,1))/2;

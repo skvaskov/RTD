@@ -12,20 +12,19 @@ close all
 obstacle_size_bounds = [0.3,0.7;0.2,0.4] ; 
 obstacle_long_spacing = [5,7];
 obstacle_lat_spacing = [-0.1 0.1];
-N_obstacles = 2  ;
+N_obstacles = 3  ;
 road_length = 20;
 lane_width = 0.6;
 bound_space = 0.4;
 
 % planner
 buffer = 0.01 ; % m
-t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+t_plan = Inf ; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
 
-FRS_directory = '/Users/seanvaskov/MATLAB/IJRR_bridging_the_gap/step_3_FRS_computation/data/simulation_full';
+plot_HLP_flag = true;
 
-plot_FRS_flag = true ;
-plot_HLP_flag = false ;
+run ~/MATLAB/GPOPS-II/gpopsMatlabPathSetup.m
 
 % simulation
 verbose_level = 5 ;
@@ -40,10 +39,7 @@ W = two_lane_road_static('N_obstacles',N_obstacles,'bound_space',0.4,...
                      'lane_width',lane_width,'road_length',road_length,...
                      'obstacle_long_spacing',obstacle_long_spacing,'obstacle_lat_spacing',obstacle_lat_spacing) ;
 
-P = rover_RTD_planner('FRS_directory',FRS_directory,'verbose',verbose_level,'buffer',buffer,...
-                                 't_plan',t_plan,'t_move',t_move,...
-                                 'plot_FRS_flag',plot_FRS_flag,...
-                                 'plot_HLP_flag',plot_HLP_flag','HLP',lane_HLP) ;
+P = rover_GPOPS_planner('plot_HLP_flag',plot_HLP_flag','HLP',lane_HLP,'timeout',t_plan,'t_plan',t_plan) ;
                  
                  
 S = simulator(A,W,P,'allow_replan_errors',true,'verbose',verbose_level,...

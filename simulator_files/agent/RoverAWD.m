@@ -51,8 +51,7 @@ classdef RoverAWD < RTD_agent_2D
             if nargin < 6
                 Z = [] ;
             end
-         
-            lr = A.rear_axel_to_center_of_mass;
+    
             
             % extract the states
             h = z(A.heading_index) ;
@@ -90,6 +89,21 @@ classdef RoverAWD < RTD_agent_2D
             zd = [xd ; yd ; hd ; vd;deltad] ;
         end
         
+                %% get agent into
+        function agent_info = get_agent_info(A)
+            % call superclass method
+            agent_info = get_agent_info@agent(A) ;
+            
+            % additional fields
+            agent_info.heading_index = A.heading_index ;
+            agent_info.velocity_index = 4;
+            agent_info.desired_time = A.desired_time ;
+            agent_info.desired_input = A.desired_input ;
+            agent_info.desired_trajectory = A.desired_trajectory ;
+            agent_info.heading_index = A.heading_index ;
+            agent_info.footprint = A.footprint ;
+            agent_info.footprint_vertices = A.footprint_vertices ;
+        end
      end
     
 end

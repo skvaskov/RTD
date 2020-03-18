@@ -69,6 +69,10 @@ classdef RTD_agent_2D < agent
                         ' Please provide either a 2-by-1 position, a 3-by-1 position',...
                         ' and heading, or an n_states-by-1 full state vector.'])
             end
+            
+            A.desired_trajectory = [];
+            A.desired_input = [];
+            A.desired_time = [];
         end
         
         %% get agent into

@@ -11,20 +11,18 @@ clear ; clc ; close all ;
 % degree of SOS polynomial solution
 degree = 4 ; % this should be 4 or 6 unless you have like 100+ GB of RAM
 
-%timing file
-load('rover_timing.mat')
+
 %error function file
 load('rover_pos_error_functions_T1.5_v0_1.0_to_2.0_degx3_degy3.mat')
 %scaling function file
-load('rover_FRS_scaling_T1.5_v0_1.0_to_2.0.mat')
+load('rover_FRS_scaling_T1.5_psi0_0.0_to_0.5_v0_1.0_to_2.0_17-Mar-2020.mat')
 
 if ~exist('A','var')
-    A = RoverAWD ;
+    A=RoverAWD();
 end
-
 max_psi = 0.6; % maximum heading 
 % whether or not to save output
-save_result = true;
+save_result = false;
 
 %% set up the FRS computation variables and dynamics
 % set up the indeterminates
@@ -45,11 +43,12 @@ v_des =    (v_des_max-v_des_min)/2*(k(3)+1)+v_des_min;
 
 % create polynomials that are positive on Z, and K, thereby
 % defining them as semi-algebraic sets; h_T is automatically generated
-hK = [sqrt(3)-k(1)^2-k(2)^2-k(3)^2;...
-         w0_des-(-w0_des_min/psi_end_max*psi_end+w0_des_min);...
-         (w0_des_max/-psi_end_min*psi_end+w0_des_max) - w0_des];
-     
+lower_lim_k1 =  -1 ;
+upper_lim_k1 =  -( w0_des_max/2 - w0_des_min/2 - (w0_des_max*(psi_end_min - (k(2) + 1)*(psi_end_min/2 - psi_end_max/2)))/psi_end_min )/(w0_des_min/2 - w0_des_max/2);
 
+hK = [(k(1)-lower_lim_k1)*(upper_lim_k1-k(1));(k(2:3)+1).*(1-k(2:3))]; 
+     
+hZ = (z+1).*(1-z);
 
 hZ0 = msspoly(zeros(2,1));
 hZ0(1) = -xc_unscaled^2-psi_unscaled^2;
@@ -104,8 +103,6 @@ xoffset = -(X_range(:,2)+X_range(:,1))/2;
 
 
 
-
-
 %% create cost function
 x = msspoly('x',1);
 y = msspoly('y',1);
@@ -113,66 +110,48 @@ y = msspoly('y',1);
 x_unscaled = xscale(1)*x-xoffset(1);
 y_unscaled = xscale(2)*y-xoffset(2);
 
-
 % this time around, we care about the indicator function being on Z x K
-int_TZK{1} = boxMoments([t;x;k], [0;-ones(4,1)], ones(5,1));
-int_TZK{2} = boxMoments([t;y;k], [0;-ones(4,1)], ones(5,1));
-
+int_TZK = boxMoments([x;y;k], [-1;-1;lower_lim_k1;-1;-1],[1;1;upper_lim_k1;1;1]);
 
 %% setup the problem structure for x and y
-for i = 1:2
 
-if i == 1
-  solver_input_problem(i).x = x;
-  solver_input_problem(i).FRS_states = [t;x;k];
-  solver_input_problem(i).hFRS_states = [t*(1-t);1-x^2;hK(1)];
-  solver_input_problem(i).hBody =  (x_unscaled-xc_unscaled-L(1))*(L(2)-x_unscaled+xc_unscaled);
-else
-  solver_input_problem(i).x = y;
-  solver_input_problem(i).FRS_states = [t;y;k];
-  solver_input_problem(i).hFRS_states = [t*(1-t);1-y^2;hK(1)];
-  solver_input_problem(i).hBody =  (y_unscaled-yc_unscaled-W(1))*(W(2)-y_unscaled+yc_unscaled);
-end
-  
-    
-solver_input_problem(i).t = t ;
-solver_input_problem(i).z = z([i, 3]) ;
-solver_input_problem(i).k = k ;
-solver_input_problem(i).f = f([i, 3]) ;
-solver_input_problem(i).hZ = 1-z(i)^2-z(3)^2;
-solver_input_problem(i).hZ0 = hZ0(i);
-solver_input_problem(i).hK = hK ;
-solver_input_problem(i).cost = int_TZK{i} ;
-solver_input_problem(i).degree = degree ;
+solver_input_problem.x = [x;y];
+solver_input_problem.FRS_states = [x;y;k];
+solver_input_problem.hFRS_states = [1-x^2;1-y^2;hK];
+solver_input_problem.hBody =  [(x_unscaled-xc_unscaled-L(1))*(L(2)-x_unscaled+xc_unscaled);...
+                                (y_unscaled-yc_unscaled-W(1))*(W(2)-y_unscaled+yc_unscaled)];
+   
+solver_input_problem.t = t ;
+solver_input_problem.z = z ;
+solver_input_problem.k = k ;
+solver_input_problem.f = f ;
+solver_input_problem.hZ = hZ;
+solver_input_problem.hZ0 = hZ0;
+solver_input_problem.hK = hK ;
+solver_input_problem.cost = int_TZK ;
+solver_input_problem.degree = degree ;
+
+solver_input_problem.g = g ;
 
 
-solver_input_problem(i).g = g([i,3],:) ;
+%% compute FRS 
+solver_output = compute_FRS(solver_input_problem) ;
 
-
-end
-
-%% compute FRS for x and y positions
-for i = 1:2
-solver_output(i) = compute_FRS(solver_input_problem(i)) ;
-end
 
 %% extract FRS polynomial result
-FRS_polynomial_x = solver_output(1).indicator_function ;
-FRS_lyapunov_function_x = solver_output(1).lyapunov_function ;
+FRS_polynomial = solver_output.indicator_function ;
+FRS_lyapunov_function = solver_output.lyapunov_function ;
 
-FRS_polynomial_y = solver_output(2).indicator_function ;
-FRS_lyapunov_function_y = solver_output(2).lyapunov_function ;
-
-
+w = FRS_polynomial;
 %% save result
 if save_result
     % create the filename for saving
-    filename = ['rover_FRS_rb_circ_T',num2str(T,'%0.1f'),'_deg',num2str(degree),'_v0_',...
-                num2str(v0_min,'%0.1f'),'_to_',...
-                num2str(v0_max,'%0.1f'),'.mat'] ;
+    filename = ['rover_FRS_full_T',num2str(T,'%0.1f'),'_deg',num2str(degree),...
+        '_psi0_',num2str(psi0_min,'%0.1f'),'_to_',num2str(psi0_max,'%0.1f'),...
+        '_v0_',num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),'_',date,'.mat'] ;
 
     % save output
     disp(['Saving FRS output to file: ',filename])
-    save(filename,'FRS_polynomial*','FRS_lyapunov_function*','T','t','x','y','z','k',...
-        'f','g','t_plan','degree','*max','*min','solver_input_problem','*scale','*offset')
+    save(filename,'FRS_polynomial*','FRS_lyapunov_function*','T','t_f','t','x','y','z','k',...
+        'diff_v','f','g','w','degree','*max','*min','solver_input_problem','*scale','*offset')
 end

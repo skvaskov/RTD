@@ -12,8 +12,8 @@ clear
 %
 % Author: Sean Vaskov
 % Created: 06 March 2020
-g_degree_x = 3;
-g_degree_y = 3;
+g_degree_x = 1;
+g_degree_y = 1;
 
 %% user parameters
 % initial condition bounds (recall that the state is (x,y,h,v), but the
@@ -219,8 +219,8 @@ g_vy_sin = fit_bounding_polynomial_from_samples(vy_sin_err_col,[T_data_col;psi_d
 
 filename = ['rover_pos_error_functions_T',num2str(T,'%0.1f'),'_v0_',...
             num2str(v0_min,'%0.1f'),'_to_',...
-            num2str(v0_max,'%0.1f'),'_degx',num2str(g_degree_x),'_degy',num2str(g_degree_y),'.mat'] ;
-save(filename,'A','T','t','z','k','g_v_cos','g_v_sin','g_vy_cos','g_vy_sin','delta0_min','delta0_max','diff_v','psi_end_min','psi_end_max',...
+            '_degx',num2str(g_degree_x),'_degy',num2str(g_degree_y),'.mat'] ;
+save(filename,'A','T','t_f','t','z','k','g_v_cos','g_v_sin','g_vy_cos','g_vy_sin','delta0_min','delta0_max','diff_v','psi_end_min','psi_end_max',...
 'v0_min','v0_max','w0_des_min','w0_des_max','v_des_min','v_des_max') ;
 
 

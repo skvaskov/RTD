@@ -12,7 +12,7 @@ classdef rover_RTD_planner < generic_RTD_planner
             % set default parameters
             t_plan = 0.5 ;
             t_move = 0.5 ;
-            lookahead_distance = 4 ;
+            lookahead_distance = 5 ;
             
             % parse arguments
             P@generic_RTD_planner('lookahead_distance',lookahead_distance,...
@@ -64,9 +64,19 @@ classdef rover_RTD_planner < generic_RTD_planner
         end
         
         %% online planning: process obstacles
-        function determine_current_FRS(P,~)
-            P.current_FRS_index = 1 ;
+        function determine_current_FRS(P,agent_info)
             
+            P.current_FRS_index = NaN ;
+            v0 = agent_info.state(agent_info.velocity_index,end);
+            psi0 = wrapToPi(agent_info.state(agent_info.heading_index,end));
+            
+            for i = 1:length(P.FRS)
+                if v0 >= P.FRS{i}.v0_min && v0 <= P.FRS{i}.v0_max && psi0 >= P.FRS{i}.psi0_min && psi0 <= P.FRS{i}.psi0_max 
+                   P.current_FRS_index = i;
+                   break
+                end
+            end
+          
         end
         
         function process_world_info(P,world_info,~)
@@ -214,17 +224,21 @@ classdef rover_RTD_planner < generic_RTD_planner
             psi_end_min = F.psi_end_min;
             psi_end = -P.agent_state(3);
             
+            lower_k3 = ((v0-diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
+            upper_k3 = ((v0+diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
+            
+            upper_psi_end = -w0_des_max/psi_end_min*psi_end+w0_des_max;
+            lower_psi_end = -w0_des_min/psi_end_max*psi_end+w0_des_min;
+            
+            upper_k1 = (upper_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
+            lower_k1 = (lower_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
              
             % create the inequality constraints and problem bounds
-            P.trajopt_problem.Aineq = -[(w0_des_max/2 - w0_des_min/2) ,0;...
-                                        (w0_des_min/2 - w0_des_max/2),0 ;...
-                                        0,- (v_des_max/2 - v_des_min/2) ;...
-                                        0,- (v_des_min/2 - v_des_max/2) ] ;
-            P.trajopt_problem.bineq = [w0_des_max/2 - w0_des_min/2 + (psi_end*w0_des_min)/psi_end_max;...
-                                       w0_des_max/2 - w0_des_min/2 - (psi_end*w0_des_max)/psi_end_min;...
-                                       -(v_des_min/2 - v0 - diff_v + v_des_max/2 );...
-                                       -(diff_v + v0 - v_des_min/2 - v_des_max/2)] ;
-            P.trajopt_problem.k_bounds = [-ones(2,1),ones(2,1)] ;
+            P.trajopt_problem.Aineq = [] ;
+            P.trajopt_problem.bineq = [] ;                      
+                                   
+            P.trajopt_problem.k_bounds = [max([lower_k1,-1],[],'omitnan'),min([upper_k1,1],[],'omitnan');...
+                                         max([lower_k3,-1]),min([upper_k3,1]) ];
         end
         
         function [n, neq, gn, gneq] = nonlcon_rover(P,k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic)
