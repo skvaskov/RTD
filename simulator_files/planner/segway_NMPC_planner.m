@@ -80,9 +80,7 @@ classdef segway_NMPC_planner < segway_generic_planner
                 P.agent_average_speed_time_horizon) ;
             
         % 2. set up obstacles
-            O = world_info.obstacles ;
-            O_buf = buffer_box_obstacles(O,P.buffer) ;
-            P.current_obstacles = O_buf ;
+            [O_buf,A_O,b_O,N_obs,N_halfplanes] = P.process_obstacles(world_info) ;
             
         % 3. get waypoint
             lkhd = (P.agent_average_speed + P.lookahead_distance) / 2 ;
@@ -101,7 +99,11 @@ classdef segway_NMPC_planner < segway_generic_planner
             P.gpops_problem.bounds.phase.initialstate.lower = z_cur' ;
             P.gpops_problem.bounds.phase.initialstate.upper = z_cur' ;
             
-            P.gpops_problem.auxdata.obs = O_buf ;
+            P.gpops_problem.auxdata.obs.A = A_O ;
+            P.gpops_problem.auxdata.obs.b = b_O ;
+            P.gpops_problem.auxdata.obs.N_obs = N_obs ;
+            P.gpops_problem.auxdata.obs.N_halfplanes = N_halfplanes ;
+            
             
             % goal
             P.gpops_problem.auxdata.goal_position = z_goal ;
@@ -126,6 +128,45 @@ classdef segway_NMPC_planner < segway_generic_planner
             P.current_plan.T = T ;
             P.current_plan.U = U ;
             P.current_plan.Z = Z ;
+        end
+        
+        %% replan: process obstacles
+        function [O_buf,A_O,b_O,N_obs,N_halfplanes] = process_obstacles(P,world_info)
+            % create buffered obstacles
+            O = world_info.obstacles ;
+            O_buf = [] ;
+            A_O = [] ;
+            b_O = [] ;
+            
+            % make sure O does not have a column of nans to start
+            if isnan(O(1,1))
+                O = O(:,2:end) ;
+            end
+            
+            % create buffered obstacles and halfplane representations
+            N_O = size(O,2) ;
+            N_obs = ceil(N_O/6) ;
+            for idx = 1:6:N_O
+                % get obstacle (we know it's a written as 5 points in CCW
+                % order, so we can cheat a bit here)
+                o = O(:,idx:idx+4) ;
+                
+                % create buffered obstacles
+                o_buf = buffer_box_obstacles(o,P.buffer,13) ;
+                O_buf = [O_buf, nan(2,1), o_buf] ;
+                
+                % create halfplane representation for collision checking
+                [A_idx,b_idx] = vert2lcon(o_buf') ;
+                A_O = [A_O ; A_idx] ;
+                b_O = [b_O ; b_idx] ;
+                
+                % get the number of halfplanes (thank goodness this ends up
+                % being exactly the same for every obstacle, saving us a
+                % lot of work)
+                N_halfplanes = length(b_idx) ;
+            end
+            
+            P.current_obstacles = O_buf ;
         end
         
         %% replan: make initial guess
@@ -323,56 +364,29 @@ function out = gpops_segway_dynamics(input)
     out.dynamics  = [x_dot, y_dot, theta_dot, omega_dot, v_dot];
 
 % obstacle check
-    O = input.auxdata.obs ;
+    % get the obstacle halfplane representation
+    A = input.auxdata.obs.A ;
+    b = input.auxdata.obs.b ;
+    N_obs = input.auxdata.obs.N_obs ;
+    N_halfplanes = input.auxdata.obs.N_halfplanes ;
     
-    % make sure the last column is nans so the indexing works out correctly
-    if ~isnan(O(1,end))
-        O = [O, nan(2,1)] ;
-    end
-
-    % setup for halfplanes
-    N_x = length(x) ;
-
-    % get obstacle start indices
-    N_nan = isnan(O(1,:)) ;
-    idxs = 1:size(O,2) ;
-    idxs = idxs(N_nan) ;
-
-    if idxs(1) ~= 1
-        idxs = [1,idxs+1] ; % this gives us the first index of each obstacle
-                            % and the last index in the obstacle variable (the
-                            % indices are columns)
-    end
-
-    half_plane_check = nan(N_x,length(idxs)-1) ;
-
-    % using a for loop to check each obstacle...
-    for idx = 1:(length(idxs)-1)
-        i1 = idxs(idx) ; % starting index of current obstacle
-        i2 = idxs(idx+1) ; % starting index of next obstacle
-
-        % get the start and end points corresponding to the current obstacle;
-        % the obstacles are line segments that start from [Ax;Ay] and end at
-        % [Bx;By]
-        Ax = O(1,i1:(i2-3)) ; Ay = O(2,i1:(i2-3)) ;
-        Bx = O(1,(i1+1):(i2-2)) ; By = O(2,(i1+1):(i2-2)) ;
-
-        % the rows of this matrix correspond to each (x,y) point to be tested;
-        % the columns correspond to each segment defining the current obstacle,
-        % which is a counterclockwise polygon; each entry in this matrix thus
-        % is negative if a point (x,y) is to the left of a line segment
-        half_plane_check_matrix = x*(By-Ay) - y*(Bx-Ax) - ...
-                               repmat(Ax.*By,N_x,1) + repmat(Ay.*Bx,N_x,1) ;
-
-        half_plane_check(:,idx) = max(half_plane_check_matrix,[],2) ;
-    end
+    % get the points along the trajectory
+    N_pts = length(x) ;
+    X = [x y]' ;
     
-    half_plane_check = min(half_plane_check,[],2) ;
+    % check all the points (note, the last line of this check would usually
+    % be -min(.), but GPOPS needs the opposite, where constraints are
+    % negative when they are satisfied, for some reason)
+    X_chk = A*X - b ;
+    X_chk = reshape(X_chk,N_halfplanes,[]) ;
+    X_chk = reshape(max(X_chk,[],1),N_obs,[]) ;
+    X_chk = min(X_chk,[],1) ;
     
-    out.path = half_plane_check ;
+    % assign output
+    out.path = X_chk(:) ;
     
     if timeout_check(input)
-        out.dynamics = zeros(N_x,5) ;
+        out.dynamics = zeros(N_pts,5) ;
         error('timed out!')
 %         out.path = zeros(size(half_plane_check)) ;
 %     else
