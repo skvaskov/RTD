@@ -35,6 +35,10 @@ classdef segway_PD_LLC < low_level_controller
             z_des = match_trajectories(t_fdbk,T,Z) ;
             u_ff = match_trajectories(t_fdbk,T,U,'previous') ;
             
+            if any(isnan(u_ff))
+                dbstop in segway_PD_LLC at 43
+            end
+            
             % get states
             h = z(3) ;
             w = z(4) ;

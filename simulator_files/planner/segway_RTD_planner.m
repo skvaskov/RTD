@@ -1,5 +1,5 @@
-classdef segway_RTD_planner < planner
-% Class: segway_RTD_planner < planner
+classdef segway_RTD_planner < segway_generic_planner
+% Class: segway_RTD_planner < segway_generic_planner
 %
 % This class implements RTD for a segway in static environments. It does
 % not inherit the generic RTD planner superclass, so that you can see how
@@ -10,15 +10,10 @@ classdef segway_RTD_planner < planner
 %
 % Author: Shreyas Kousik
 % Created: 11 Mar 2020
-% Updated: 14 Mar 2020
+% Updated: 20 Mar 2020
 
     %% properties
-    properties
-        % agent information
-        agent_footprint = 0.38 ;
-        agent_max_accel = 3 ;
-        agent_max_yaw_rate = 2 ;
-    
+    properties        
         % FRS handling
         FRS % this is a cell array of loaded info from FRS .mat files
         FRS_degree = 10 ; % set to 4, 6, 8, 10, or 12
@@ -30,15 +25,8 @@ classdef segway_RTD_planner < planner
         current_obstacles_in_FRS_coords
         bounds_as_obstacle
         
-        % plan handling
-        current_waypoint
-        spin_in_place_flag = false ;
-        lookahead_distance = 1.5 ; % meters
-        
         % plotting
-        plot_obstacles_flag = true ;
         plot_FRS_flag = false ;
-        plot_waypoints_flag = false ;
     end
     
     %% class methods
@@ -149,7 +137,7 @@ classdef segway_RTD_planner < planner
             P.plot_data.FRS = [] ;
             
         % 7. set up info structure to save replan dat
-            I = struct('agent_time',[],'agent_state',[],...
+            P.info = struct('agent_time',[],'agent_state',[],...
                 'k_opt_found',[],...
                 'FRS_index',[],...
                 'waypoint',[],...
@@ -157,8 +145,8 @@ classdef segway_RTD_planner < planner
                 'obstacles',[],...
                 'obstacles_in_world_frame',[],...
                 'obstacles_in_FRS_frame',[],...
-                'spin_in_place_flag',[]) ;
-            P.info = I ;
+                'traj_opt_exitflag',[],...
+                'T',[],'U',[],'Z',[]) ;
         end
         
     %% replan
@@ -175,10 +163,17 @@ classdef segway_RTD_planner < planner
             % start a timer to enforce the planning timeout P.t_plan
             start_tic = tic ;
             
-            % 1. determine the current FRS based on the agent
-            [FRS_cur,current_FRS_index,v_cur,w_cur] = get_current_FRS(P,agent_info) ;
+        % 1. determine the current FRS based on the agent
+            [FRS_cur,current_FRS_index,v_cur,w_cur] = P.get_current_FRS(agent_info) ;
             
-            % 2. process obstacles
+            % also get the agent's average speed (if this average speed is
+            % below the average speed threshold, we command the agent to
+            % spin in place)
+            P.agent_average_speed = get_segway_average_speed(agent_info.time,...
+                agent_info.state(agent_info.speed_index,:),...
+                P.agent_average_speed_time_horizon) ;
+            
+        % 2. process obstacles
             [O,O_FRS,O_pts] = P.process_obstacles(agent_info,world_info,FRS_cur) ;
             
             % save obstacles
@@ -186,18 +181,18 @@ classdef segway_RTD_planner < planner
             P.current_obstacles = O_pts ; % buffered and discretized
             P.current_obstacles_in_FRS_coords = O_FRS ;
             
-            % 3. create the cost function for trajectory optimization
+        % 3. create the cost function for trajectory optimization
             z_goal = P.get_waypoint(O,agent_info,world_info) ;
             cost = P.create_cost_function(FRS_cur,agent_info,z_goal,start_tic) ;
             
-            % 4. create the constraints for fmincon
+        % 4. create the constraints for fmincon
             nonlcon = P.create_constraint_function(O_FRS,current_FRS_index,start_tic) ;
             k_bounds = P.create_trajopt_bounds(w_cur,v_cur,FRS_cur) ;
             
-            % 5. run trajectory optimization
+        % 5. run trajectory optimization
             [k_opt,exitflag] = P.optimize_trajectory(cost,k_bounds,nonlcon) ;
             
-            % 6. make the new plan, continue the old plan, or spin in place
+        % 6. make the new plan, continue the old plan, or spin in place
             [T,U,Z] = P.process_traj_opt_result(k_opt,exitflag,agent_info,FRS_cur) ;
             
             % save the new plan
@@ -205,18 +200,22 @@ classdef segway_RTD_planner < planner
             P.current_plan.U = U ;
             P.current_plan.Z = Z ;
             
-            % 7. update the info structure
+        % 7. update the info structure
             I = P.info ;
             
             I.agent_time = [I.agent_time, agent_info.time(end)] ;
             I.agent_state = [I.agent_state, agent_info.state(:,end)] ;
             I.k_opt_found = [I.k_opt_found, k_opt] ;
+            I.traj_opt_exitflag = [I.traj_opt_exitflag, exitflag] ;
             I.FRS_index = [I.FRS_index, current_FRS_index] ;
             I.waypoint = [I.waypoint, z_goal] ;
             I.waypoints = [I.waypoints, {P.HLP.waypoints}] ;
             I.obstacles = [I.obstacles, {O}] ;
             I.obstacles_in_world_frame = [I.obstacles_in_world_frame, {O_pts}] ;
             I.obstacles_in_FRS_frame = [I.obstacles_in_FRS_frame, {O_FRS}] ;
+            I.T = [I.T, {T}] ;
+            I.U = [I.T, {U}] ;
+            I.Z = [I.T, {Z}] ;
             
             P.info = I ;
         end
@@ -236,6 +235,11 @@ classdef segway_RTD_planner < planner
                 current_FRS_index = 2 ;
             else
                 current_FRS_index = 1 ;
+            end
+            
+            % use the fastest FRS when the average speed is super low
+            if P.agent_average_speed < P.agent_average_speed_threshold
+                current_FRS_index = 3 ;
             end
             
             FRS_cur = P.FRS{current_FRS_index} ;
@@ -261,14 +265,14 @@ classdef segway_RTD_planner < planner
             P.vdisp('Getting waypoint',5)
             
             % buffer obstacles for high-level planner
-            O_HLP = buffer_polygon_obstacles(O,P.agent_footprint) ;
+            O_HLP = buffer_polygon_obstacles(O,P.agent_footprint + P.buffer_for_HLP) ;
             world_info.obstacles = O_HLP ;
             
             % make a waypoint (this is wrapped in a try/catch in case the
             % waypoint planner has bugs)
             try
-                P.vdisp('Getting waypoint',7)
-                z_goal = P.HLP.get_waypoint(agent_info,world_info,P.lookahead_distance) ;
+                lkhd = (P.agent_average_speed + P.lookahead_distance) / 2 ;
+                z_goal = P.HLP.get_waypoint(agent_info,world_info,lkhd) ;
             catch
                 P.vdisp('Waypoint creation errored! Using global goal instead',6)
                 z_goal = P.HLP.goal ;
@@ -382,79 +386,35 @@ classdef segway_RTD_planner < planner
                 P.vdisp('New plan successfully found!',5)
                 w_des = full(msubs(FRS_cur.w_des,FRS_cur.k,k_opt)) ;
                 v_des = full(msubs(FRS_cur.v_des,FRS_cur.k,k_opt)) ;
-
-                % create the desired trajectory
-                t_stop = v_des / P.agent_max_accel ;
-                [T,U,Z] = make_segway_braking_trajectory(FRS_cur.t_plan,...
-                            t_stop,w_des,v_des) ;
+                
+                % if v_des is 0 and the agent's average speed is too low,
+                % produce a spin-in-place maneuver
+                if (v_des < P.agent_average_speed_threshold) && ...
+                        (P.agent_average_speed < P.agent_average_speed_threshold)
+                    
+                    % w_cur = agent_info.state(agent_info.yaw_rate_index,end) ;
+                    % delta_w = FRS_cur.delta_w ;
+                    % w_des = make_segway_random_yaw_rate(w_cur,delta_w,P.agent_max_yaw_rate) ;
+                    
+                    w_des = P.make_yaw_rate_towards_waypoint(agent_info.state(:,end),P.current_waypoint) ;
+                    [T,U,Z] = make_segway_spin_trajectory(P.t_move,w_des) ;
+                else
+                    
+                    % create the desired trajectory
+                    t_stop = v_des / P.agent_max_accel ;
+                    [T,U,Z] = make_segway_braking_trajectory(FRS_cur.t_plan,...
+                        t_stop,w_des,v_des) ;
+                end
                         
                 % move plan to world coordinates
                 Z(1:3,:) = local_to_world(agent_info.state(:,end),Z(1:3,:)) ;
             else
             % if trajectory optimization was unsuccessful, try to continue
             % the previous plan
-                P.vdisp('Continuing previous plan!',5)
-                
-                % first, check if there is enough of the past plan left to
-                % keep executing
-                T_old = P.current_plan.T ;
-                U_old = P.current_plan.U ;
-                Z_old = P.current_plan.Z ;
-                
-                if ~isempty(T_old)
-                    % try shifting the current plan by P.t_move
-                    T_log = T_old >= P.t_move ;
-                else
-                    T_log = false ;
-                end
-                   
-                % keep what is left from the previous plan
-                if any(T_log)
-                    P.vdisp('Incrementing old plan!',6)
-                    
-                    % make sure P.t_move exists in the trajectory
-                    T_temp = [T_old(T_old < P.t_move), P.t_move, T_old(T_old > P.t_move)] ;
-                    [U,Z] = match_trajectories(T_temp,T_old,U_old,T_old,Z_old) ;
-                    
-                    % increment the time and input
-                    T = T_old(T_log) - P.t_move ;
-                    U = U(:,T_log) ;
-                    Z = Z(:,T_log) ;
-                else
-                    P.vdisp('Making stopped plan!',6)
-                    T = 0 ;
-                    U = zeros(2,1) ;
-                    Z = [agent_info.state(1:3,end) ; zeros(2,1)] ;
-                end
-                
-                % make a spin-in-place maneuver of duration P.t_move
-                P.vdisp('Adding spin maneuver to previous plan!',7)
-                w_cur = agent_info.state(agent_info.yaw_rate_index,end) ;
-                delta_w = FRS_cur.delta_w ;
-                [T_spin,U_spin,Z_spin] = make_segway_spin_trajectory(P.t_move,...
-                    w_cur,delta_w,P.agent_max_yaw_rate) ;
-                
-                T_spin = T_spin + T(end) ;
-                
-                % rotate and shift Z_spin to the end of the agent's current
-                % trajectory
-                Z_spin(1:3,:) = repmat(agent_info.state(1:3,end),1,size(Z_spin,2)) ;
-                
-                % add the spin maneuver to the end of the previous
-                % trajectory
-                T = [T, T_spin(2:end)] ;
-                U = [U, U_spin(:,2:end)] ;
-                Z = [Z, Z_spin(:,2:end)] ;
-                
-                % if the new plan is not long enough, add a spin-in-place
-                % maneuver to the end of it
-                if T(end) < P.t_move
-                    T = [T, P.t_move, 2*P.t_move] ;
-                    U = [U, zeros(2,1)] ;
-                    Z = [Z, [Z(1:3,end) ; 0; 0], [Z(1:3,end) ; 0; 0] ] ;
-                end
+                [T,U,Z] = P.make_plan_for_traj_opt_failure(agent_info) ;
             end
         end
+
         
         %% plotting
         function plot(P,~)
@@ -471,11 +431,7 @@ classdef segway_RTD_planner < planner
                 end
             end
             
-            hold_check = false ;
-            if ~ishold
-                hold_check = true ;
-                hold on ;
-            end
+            hold_check = hold_switch() ;
             
             % figure out the info index closest to the current time
             I = P.info ;
@@ -517,21 +473,20 @@ classdef segway_RTD_planner < planner
             
             % plot FRS
             if P.plot_FRS_flag && info_idx_check
-                % iterate back through the info indices until the last
-                % info index where k_opt was found successfully
-                FRS_info_idx = info_idx ;
-                k_opt_idx = nan(2,1);
-                while FRS_info_idx > 0
+                % find the last info index that had a positive exitflag
+                exitflag_log = I.traj_opt_exitflag(1:info_idx) > 0 ;
+                FRS_info_idx = find(exitflag_log,1,'last') ;
+                FRS_info_idx_check = ~isempty(FRS_info_idx) ;
+                
+                % set the k_opt_idx to nan if no trajectory was found
+                if FRS_info_idx_check
                     k_opt_idx = I.k_opt_found(:,FRS_info_idx) ;
-                    if ~isnan(k_opt_idx(1))
-                        break
-                    else
-                        FRS_info_idx = FRS_info_idx - 1 ;
-                    end
+                else
+                    k_opt_idx = nan(2,1) ;
                 end
                 
                 % get the FRS and agent state for the current info index
-                if ~isempty(FRS_info_idx) && FRS_info_idx > 0 && ~isnan(k_opt_idx(1))
+                if FRS_info_idx_check && FRS_info_idx > 0 && ~isnan(k_opt_idx(1))
                     FRS_idx = P.FRS{I.FRS_index(FRS_info_idx)} ;
                     agent_state = I.agent_state(:,FRS_info_idx) ;
                     
@@ -583,9 +538,7 @@ classdef segway_RTD_planner < planner
                 end
             end
             
-            if hold_check
-                hold off
-            end
+            hold_switch(hold_check) ;
         end
     end
     
@@ -747,7 +700,8 @@ classdef segway_RTD_planner < planner
             if nargout > 1
                 O_buf_out = O_buf ;
                 if nargout > 2
-                    O_pts_out = O_pts ;
+                    % map the O_FRS points back to the world frame for plotting
+                    O_pts_out = FRS_to_world(O_FRS,pose,x0,y0,D) ;
                 end
             end
         end
