@@ -21,7 +21,7 @@ function [T_brk,U_brk,Z_brk] = convert_rover_desired_to_braking_traj(t_plan,t_st
     t_log = T >= t_plan ;
     brk_start_idx = find(t_log,1);
     
-    decel_rate = 3;
+    decel_rate = 2;
     t_decel = T <= t_plan+(Z_brk(4, brk_start_idx)/decel_rate) & t_log;
 
     % set the desired velocity to decelerate at the desired decel rate to zero
@@ -46,4 +46,5 @@ function [T_brk,U_brk,Z_brk] = convert_rover_desired_to_braking_traj(t_plan,t_st
     
     % create braking nominal input
     U_brk = Z_brk([4 5],:) ;
+    U_brk(1,t_log) = 0;
 end

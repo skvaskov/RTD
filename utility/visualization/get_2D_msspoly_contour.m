@@ -55,19 +55,17 @@ function h = get_2D_msspoly_contour(p,x,l,varargin)
     % scale and shift for plotting
     X1 = Scale(1)*(x_vec) + Offset(1) ;
     X2 = Scale(2)*(x_vec) + Offset(2) ;
-    
-    if any(pose0~=0)
-       XUS = [X1;X2];
-       XUS = rotation_matrix_2D(pose0(3))*XUS+pose0(1:2);
-        X1 = XUS(1,:);
-        X2 = XUS(2,:);
-    end
-    
+   
 %% plot
  
     h = contourc(X1,X2,P,[l l]) ;
+
     
     h(:,h(1,:) == l) = NaN;
+    
+    if any(pose0~=0)
+    h = rotation_matrix_2D(pose0(3))*h+pose0(1:2);
+    end
     
     if nargout < 1
         clear h

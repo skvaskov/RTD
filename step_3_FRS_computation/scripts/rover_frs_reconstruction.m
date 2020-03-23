@@ -9,19 +9,12 @@
 clear ; clc ; close all ;
 %% user parameters
 % degree of SOS polynomial solution
-degree_reconstruction = 8; %this is the degree of the final (w) reachset
-
-% load timing and relavent files
-load('rover_timing.mat')
+degree_reconstruction = 4; %this is the degree of the final (w) reachset
 
 % load the error functions and distance scales
-load('rover_FRS_scaling_T1.5_v0_1.0_to_2.0_16-Mar-2020.mat')
-load('rover_FRS_rect_T1.5_deg8_v0_1.0_to_2.0_17-Mar-2020.mat')
+load('rover_FRS_xy_scaling_T1.5_v0_1.0_to_2.0_20-Mar-2020.mat')
+load('rover_FRS_xy_T1.5_deg6_v0_1.0_to_2.0_20-Mar-2020.mat')
   
-
-
-plotting = true; %plot sample trajectory
-
 % whether or not to save output
 save_result = true;
 
@@ -30,6 +23,12 @@ save_result = true;
 
 max_psi = 0.6;
 %% automated from here
+if ~exist('lower_lim_k1','var')
+    lower_lim_k1 = -1;
+end
+if ~exist('upper_lim_k1','var')
+    upper_lim_k1 = 1;
+end
 
 % create agent to use for footprint
 A = RoverAWD ;
@@ -61,52 +60,15 @@ xoffset = -(X_range(:,2)+X_range(:,1))/2;
 x_unscaled = xscale(1)*x-xoffset(1);
 y_unscaled = xscale(2)*y-xoffset(2);
 
-hX =  sqrt(2)-x^2-y^2;
+hX =  [1-x^2;1-y^2];
 hB = [(x_unscaled-xc_unscaled-L(1))*(L(2)-x_unscaled+xc_unscaled);...
       (y_unscaled-yc_unscaled-W(1))*(W(2)-y_unscaled+yc_unscaled)];
 hT = t*(1-t);
-hK = [(k+1).*(1-k);solver_input_problem(1).hK(end-1:end)];
+hK = solver_input_problem(1).hK;
 hZ = (z+1).*(1-z);
   
-int_XK = boxMoments([x;y;k],-ones(5,1),ones(5,1));
+int_XK = boxMoments([x;y;k(2);k(1);k(3)],[-1,-1,lower_lim_k2,lower_lim_k1,-1],[1,1,upper_lim_k2,upper_lim_k1,1]);
 
-%% if plotting sample f and g
-if plotting
-Nsamp = 50;
-k_test = [1;0;1];
-
-Xvec = linspace(-1,1,100);
-for tp = linspace(0,1,5)
-    hold on
-
-
-    figure(1)
-      xlims = get_1D_msspoly_projection(msubs(-FRS_lyapunov_function_x,[t;k],[tp;k_test]),z([1,3]),0,1,'Scale',zscale([1,3]),'Offset',-zoffset([1,3]));
-      ylims =  get_1D_msspoly_projection(msubs(-FRS_lyapunov_function_y,[t;k],[tp;k_test]),z([2,3]),0,1,'Scale',zscale([2,3]),'Offset',-zoffset([2,3]));
-      if all(~isnan(xlims) & ~isnan(ylims))
-      xbox = make_box([diff(xlims),diff(ylims)])+[mean(xlims);mean(ylims)];
-      fill(xbox(1,:),xbox(2,:),[0 0.5 0.25])
-      end
-end
-
-
-ztemp= cell(1,Nsamp);
-f_fun = msspoly_to_fun(f,{t,z,k});
-g_fun = msspoly_to_fun(g,{t,z,k});
-for i = 1:Nsamp
-    d = 2*rand(2,1)-1;
-    z0 = [0;0;0];
-    
-    [~,ztemp{i}] = ode45(@(t,z) f_fun(t,z,k_test)+g_fun(t,z,k_test)*d,[0 1],(z0-zoffset)./zscale);
-    
-end
-
-ztemp = cat(1,ztemp{:})';
-
-ztemp = repmat(zscale,[1 size(ztemp,2)]).*ztemp+repmat(zoffset,[1 size(ztemp,2)]);
-
-plot(ztemp(1,:),ztemp(2,:),'b.')
-end
 
 
 %% solve reconstruction
@@ -142,30 +104,15 @@ w = sol.eval(w);
 %% save result
 if save_result
     % create the filename for saving
-    filename = ['rover_reconstructed_deg',num2str(degree_reconstruction),'_T',num2str(T),'_v0_',...
+    filename = ['rover_reconstructed_deg',num2str(degree_reconstruction),'_frsdeg',num2str(degree),'_T',num2str(T),'_v0_',...
                 num2str(v0_min,'%0.1f'),'_to_',...
                 num2str(v0_max,'%0.1f'),'.mat'] ;
 
     % save output
     disp(['Saving FRS output to file: ',filename])
     save(filename,'FRS_polynomial*','FRS_lyapunov_function*','w','x','y','t','z','k',...
-        'f','g','t_plan','t_f','degree','degree_reconstruction','solver_input_problem','*_max','*_min','*scale','*offset')
+        'f','g','t_f','degree','lower_lim*','upper_lim*','degree_reconstruction','solver_input_problem','*_max','*_min','*scale','*offset')
 end
-
-%%
-
-
-
-
- hold on
- figure(1)
-xlim(xscale(1)*[-1 1]-xoffset(1))
-ylim(xscale(2)*[-1 1]-xoffset(2))
-
-
-plot_2D_msspoly_contour(subs(w,k,k_test),[x;y],1,'Scale',xscale,'Offset',-xoffset,'LineWidth',1.5,'Color',[0 0.75 0.25])
-
-
 
 
 

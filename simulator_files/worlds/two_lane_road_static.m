@@ -45,7 +45,7 @@ function W = two_lane_road_static(varargin)
     end
     
    
-    W.goal = [W.road_length;0];
+    
     W.reset();
     % call setup to generate obstacles if Nobstacles is > 0 but no
     % obstacles were setup
@@ -178,6 +178,7 @@ function reset(W)
     mult = randi(2)-3;
     
     W.start = [0;1^mult*W.lane_width/2;0];
+    W.goal = [W.road_length;W.start(2)];
     
 end
         

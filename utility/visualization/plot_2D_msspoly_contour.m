@@ -51,17 +51,19 @@ function h = plot_2D_msspoly_contour(p,x,l,varargin)
 %     % scale and shift for plotting
 %     X1 = Scale*(X1 + Offset(1)) ;
 %     X2 = Scale*(X2 + Offset(2)) ;
-
+    if numel(Scale) ==1
+        Scale = [Scale,Scale];
+    end
     % scale and shift for plotting
-    X1 = Scale*(X1) + Offset(1) ;
-    X2 = Scale*(X2) + Offset(2) ;
+    X1 = Scale(1)*(X1) + Offset(1) ;
+    X2 = Scale(2)*(X2) + Offset(2) ;
     
 %% plot
     if ~isempty(FillColor)
         [~,h] = contourf(X1,X2,P,[l l],'Fill','on',varargin_new{:}) ;
         colormap(FillColor)
     else
-        h = contour(X1,X2,P,[l l],varargin_new{:}) ;
+       [~, h] = contour(X1,X2,P,[l l],varargin_new{:}) ;
     end
     
     if nargout < 1

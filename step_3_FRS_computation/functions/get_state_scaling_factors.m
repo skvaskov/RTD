@@ -135,7 +135,7 @@ if ~isempty(hZ0)
         
         for i = 1:length(hZ0)
 
-            if (N_k-N_d)>0
+            if N_k>0
                 Lz0 = hZ0{i}(combos_z0,combos_k)>=0;
                 combos_k = combos_k(:,Lz0);
             else

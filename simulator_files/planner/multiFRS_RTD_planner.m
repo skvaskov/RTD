@@ -1,4 +1,4 @@
-classdef generic_RTD_planner < planner
+classdef multiFRS_RTD_planner < planner
     properties
         % robot info
         max_speed
@@ -21,15 +21,18 @@ classdef generic_RTD_planner < planner
         FRS_directory
         FRS
         current_FRS_index = 1 ; % in case multiple FRSes are used for planning
+        FRS_indicies_to_optimize_over;
+        current_obstacles_in_FRS_coordinates;
         
         % plotting
         plot_obstacle_flag = false ;
         plot_FRS_flag = false ;
         plot_waypoints_flag = true;
+        
     end
     methods
         %% constructor
-        function P = generic_RTD_planner(varargin)
+        function P = multiFRS_RTD_planner(varargin)
             % set default values
             buffer = 1 ;
             
@@ -145,7 +148,6 @@ classdef generic_RTD_planner < planner
             
             % trajectory optimization initialization
             P.braking_flag = true ;
-            P.initialize_trajopt_problem()
             
             % reset latest plan trajectory info
             P.latest_plan.k_opt = nan(2,1) ;
@@ -177,6 +179,9 @@ classdef generic_RTD_planner < planner
             % plotting setup
             P.plot_data.obstacles = [] ;
             P.plot_data.waypoint = [] ;
+            
+            P.initialize_trajopt_problem();
+
         end
         
         %% setup: initialize trajopt problem
@@ -213,7 +218,7 @@ classdef generic_RTD_planner < planner
                 'FRS_index_used_for_plan',[],...
                 'current_waypoint',[],...
                 'current_obstacles',[],...
-                'braking_flag',[]) ;
+                'braking_flag',[],'planning_time',[]) ;
             P.info = I ;
         end
         
@@ -237,39 +242,7 @@ classdef generic_RTD_planner < planner
             %     P.increment_nominal_trajectory
             %     P.make_stopped_control_input
             
-            % start a timer
-            replan_start_tic = tic ;
-            
-            % reset the timeout parameter
-            P.timeout_flag = false ;
-            
-            % create problem structure
-            P.prep_for_trajopt(agent_info,world_info,replan_start_tic)
-            
-            % call online optimizer if we haven't reached the timeout
-            [k_opt,exitflag] = P.trajopt() ;
-            
-            % parse output
-            [T_out,U_out,Z_out] = P.parse_trajopt_output(agent_info,k_opt,exitflag) ;
-            
-            % save info
-            P.save_online_planning_info()
-        end
-        
-        
-        %% online planning: setup trajopt problem
-        function prep_for_trajopt(P,agent_info,world_info,start_tic)
-            % P.prep_for_trajopt(A,O,t_replan_start)
-            %
-            % Fill in the P.trajopt_problem structure with the following steps:
-            %   1. determine the current FRS
-            %   2. process the current obstacles (i.e. buffer and discretize)
-            %   3. create the cost and constraint functions for the current plan
-            %
-            % Each of the methods called by this method should be custom-written in
-            % a subclass of RTD_planner
-            
-            % get agent state
+             % get agent state
             P.agent_state = agent_info.state(:,end) ;
             
             % get agent time
@@ -280,30 +253,112 @@ classdef generic_RTD_planner < planner
             % RTD planner)
             P.determine_current_FRS(agent_info) ;
             
+            P.create_waypoint(agent_info,world_info);
+            
+            % reset the timeout parameter
+            P.timeout_flag = false ;
+            
+            k_opt = cell([1,length(P.FRS_indicies_to_optimize_over)]);
+            final_cost = Inf([1,length(P.FRS_indicies_to_optimize_over)]);
+            exitflag = -ones([1,length(P.FRS_indicies_to_optimize_over)]);
+            traj_opt_time = NaN([1,length(P.FRS_indicies_to_optimize_over)]);
+            
+            P.current_obstacles = cell(1,length(P.FRS_indicies_to_optimize_over));
+            P.current_obstacles_in_FRS_coordinates = cell(1,length(P.FRS_indicies_to_optimize_over));
+            
+        if ~isempty(k_opt)
+        
+        for i = 1:length(P.FRS_indicies_to_optimize_over)
+            
+            % create problem structure
+            P.prep_for_trajopt(agent_info,world_info,i)
+
+            % call online optimizer if we haven't reached the timeout
+            [k_opt{i},final_cost(i),exitflag(i),traj_opt_time(i)] = P.trajopt() ;
+            
+        end
+        
+        
+        [selected_frs_idx] = P.select_k_opt(k_opt,final_cost,exitflag);
+        
+        P.current_obstacles = P.current_obstacles{selected_frs_idx};
+        P.current_obstacles_in_FRS_coordinates = P.current_obstacles_in_FRS_coordinates{selected_frs_idx};
+        
+        exitflag_select = exitflag(selected_frs_idx);
+        if exitflag_select <=0
+            
+            traj_opt_time_select = NaN;
+            k_opt_select = NaN(size(k_opt{selected_frs_idx}));
+            P.current_FRS_index = selected_frs_idx;
+
+        else
+            
+            k_opt_select = k_opt{selected_frs_idx};
+            traj_opt_time_select = traj_opt_time(selected_frs_idx);
+            P.current_FRS_index = P.FRS_indicies_to_optimize_over(selected_frs_idx);
+            
+        end
+     else
+        
+        k_opt_select = NaN;
+        exitflag_select = -1;
+        traj_opt_time_select = NaN;
+        P.current_FRS_index = NaN;
+        P.current_obstacles = [];
+        P.current_obstacles_in_FRS_coordinates = [];
+
+    end
+    
+
+            % parse output
+            [T_out,U_out,Z_out] = P.parse_trajopt_output(agent_info,k_opt_select,exitflag_select) ;
+            
+            % save info
+            P.save_online_planning_info(traj_opt_time_select)
+        end
+        
+        function selected_frs_idx = select_k_opt(P,k_opt,final_cost,exitflag)
+            
+            [~,selected_frs_idx] = min(final_cost);
+            
+        end
+        
+        %% online planning: setup trajopt problem
+        function prep_for_trajopt(P,agent_info,world_info,frs_idx)
+            % P.prep_for_trajopt(A,O,t_replan_start)
+            %
+            % Fill in the P.trajopt_problem structure with the following steps:
+            %   1. determine the current FRS
+            %   2. process the current obstacles (i.e. buffer and discretize)
+            %   3. create the cost and constraint functions for the current plan
+            %
+            % Each of the methods called by this method should be custom-written in
+            % a subclass of RTD_planner
+
             % process world (obstacle) info (should be custom written)
-            P.process_world_info(world_info,start_tic) ;
+            P.process_world_info(world_info,frs_idx) ;
             
             % create constraints
-            P.create_constraints(start_tic) ;
+            P.create_constraints(frs_idx) ;
             
             % create cost (note that, inside P.create_cost_function, the user
             % should typically call P.create_waypoint)
-            P.create_cost_function(agent_info,world_info,start_tic) ;
+            P.create_cost_function(agent_info,world_info,frs_idx) ;
             
             % create initial guess
-            P.create_initial_guess(start_tic) ;
+            P.create_initial_guess(frs_idx) ;
         end
         
         %% online planning: create cost
-        function create_cost_function(P,agent_info,world_info,start_tic)
+        function create_cost_function(P,agent_info,world_info,idx)
             P.vdisp(['Cost function undefined! Please write a ',...
                 'create_cost_function method for your RTD planner.'])
-            P.create_waypoint(agent_info,world_info,start_tic) ;
+
             P.trajopt_problem.cost_function = [] ;
         end
         
         %% online planning: create waypoint
-        function create_waypoint(P,agent_info,world_info,start_tic)
+        function create_waypoint(P,agent_info,world_info)
             % P.create_waypoint(agent_info,start_tic)
             %
             % This gets a waypoint from the high level planner (P.HLP) and
@@ -317,7 +372,7 @@ classdef generic_RTD_planner < planner
         end
         
         %% online planning: create initial guess
-        function create_initial_guess(P,start_tic)
+        function create_initial_guess(P,frs_idx)
             % P.create_initial_guess(start_tic)
             %
             % By default, set the initial guess for trajopt to the previous k_opt,
@@ -335,7 +390,7 @@ classdef generic_RTD_planner < planner
         end
         
         %% online planning: create nonlcons and linear cons
-        function create_constraints(P,start_tic)
+        function create_constraints(P,frs_idx)
             % P.create_constraints(start_tic)
             %
             % This should take whatever is in P.current_obstacles and turn
@@ -370,11 +425,14 @@ classdef generic_RTD_planner < planner
                 'method! You are using the default method, which sets ',...
                 'the current FRS index to 1.'],10)
             P.current_FRS_index = 1 ;
+            P.FRS_indicies_to_optimize_over = 1;
+            %initial trajectory optimization problem for number of FRS's
+            %you want to check
         end
         
         
         %% online planning: process obstacles
-        function process_world_info(P,world_info,start_tic)
+        function process_world_info(P,world_info,frs_idx)
             % P.process_world_info(world_info)
             %
             % By default, this method just puts the world_info.obstacles
@@ -387,7 +445,7 @@ classdef generic_RTD_planner < planner
         end
         
         %% online planning: trajopt
-        function [k_opt,exitflag] = trajopt(P)
+        function [k_opt,feval,exitflag,trajopt_time] = trajopt(P)
             % [k_opt,exitflag] = P.trajopt()
             %
             % Run the online optimizer. By default, this calls fmincon with the cost
@@ -395,24 +453,23 @@ classdef generic_RTD_planner < planner
             % created by P.create_constraints, the linear constraints
             % created by P.create_trajopt_bounds_and_ineq_cons, and the initial guess
             % created by P.create_initial_guess
-     
-            if ~P.timeout_flag
-                  try
-  
+
+                   try
+                    start_tic = tic;
                         
                     if ~isempty(P.trajopt_problem.nonlcon_function)
-                        [k_opt,~,exitflag] = fmincon(@(x) P.trajopt_problem.cost_function(x),...
+                        [k_opt,feval,exitflag] = fmincon(@(x) P.trajopt_problem.cost_function(x,start_tic),...
                             P.trajopt_problem.initial_guess,...
                             P.trajopt_problem.Aineq,...
                             P.trajopt_problem.bineq,...
                             [],[],... % linear equality constraints
                             P.trajopt_problem.k_bounds(:,1),...
                             P.trajopt_problem.k_bounds(:,2),...
-                            @(x) P.trajopt_problem.nonlcon_function(x),...
+                            @(x) P.trajopt_problem.nonlcon_function(x,start_tic),...
                             P.trajopt_problem.options) ;
                     else
                         P.vdisp('constraint function is empty',4)
-                        [k_opt,~,exitflag] = fmincon(@(x) P.trajopt_problem.cost_function(x),...
+                        [k_opt,feval,exitflag] = fmincon(@(x) P.trajopt_problem.cost_function(x,start_tic),...
                             P.trajopt_problem.initial_guess,...
                             P.trajopt_problem.Aineq,...
                             P.trajopt_problem.bineq,...
@@ -422,18 +479,18 @@ classdef generic_RTD_planner < planner
                             [],...
                             P.trajopt_problem.options) ;
                     end
+                    
                  catch
                      P.vdisp('optimization error',1)
                      k_opt = nan(size(P.trajopt_problem.initial_guess)) ;
                      exitflag = -1 ;
-                 end 
+                  end 
+                  trajopt_time = toc(start_tic);
                     
-            else
-                
-                k_opt = nan(size(P.trajopt_problem.initial_guess)) ;
-                exitflag = -1 ;
-                
-            end
+                    if exitflag<0
+                        feval = Inf;
+                    end
+       
         end
         
         %% online planning: parse trajopt output
@@ -458,6 +515,8 @@ classdef generic_RTD_planner < planner
                 P.vdisp('Transforming new plan to world frame',7)
                 idx = [agent_info.position_indices(:) ; agent_info.heading_index] ;
                 Z_out(idx,:) = local_to_world(agent_info.state(idx,end),Z_out(idx,:)) ;
+                            
+
             else
                 P.vdisp('No feasible solution found!',2)
                 P.braking_flag = true ;
@@ -478,12 +537,12 @@ classdef generic_RTD_planner < planner
                 
                 P.latest_plan.k_opt = nan(size(P.trajopt_problem.initial_guess)) ;
             end
-            
             P.latest_plan.time = T_out ;
             P.latest_plan.input = U_out ;
             P.latest_plan.trajectory = Z_out ;
             P.latest_plan.agent_state = P.agent_state ;
             P.latest_plan.current_FRS_index = P.current_FRS_index ;
+
         end
         
         %% online planning: create output given successful replan
@@ -588,7 +647,7 @@ classdef generic_RTD_planner < planner
         end
         
         %% online planning: save planning info
-        function save_online_planning_info(P)
+        function save_online_planning_info(P,timing)
             % P.save_online_planning_info()
             %
             % This updates the P.info object with everything corresponding
@@ -624,6 +683,8 @@ classdef generic_RTD_planner < planner
             I.current_obstacles = [I.current_obstacles, {P.current_obstacles}] ;
             
             I.braking_flag = [I.braking_flag, P.braking_flag] ;
+            
+            I.planning_time = [I.planning_time,timing];
             
             P.info = I ;
         end

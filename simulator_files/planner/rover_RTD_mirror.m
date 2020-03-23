@@ -1,31 +1,31 @@
-classdef rover_RTD_planner < generic_RTD_planner
+classdef rover_RTD_mirror < multiFRS_RTD_planner
     properties
         point_spacing
         arc_point_spacing
         
         w_polynomial_info
         
-        current_obstacles_in_FRS_coords
+        w0
         
         bounds_as_obstacle
     end
     methods
         %% constructor and setup
-        function P = rover_RTD_planner(varargin)
+        function P = rover_RTD_mirror(varargin)
             % set default parameters
             t_plan = 0.5 ;
             t_move = 0.5 ;
             lookahead_distance = 5 ;
             
             % parse arguments
-            P@generic_RTD_planner('lookahead_distance',lookahead_distance,...
+            P@multiFRS_RTD_planner('lookahead_distance',lookahead_distance,...
                 't_plan',t_plan,'t_move',t_move,varargin{:})
         end
     
         
         function setup(P,agent_info,world_info)
             % call superclass setup
-            setup@generic_RTD_planner(P,agent_info,world_info)
+            setup@multiFRS_RTD_planner(P,agent_info,world_info)
             
             % make sure buffer is small enough, i.e. b < \bar{b}
             bbar = agent_info.footprint(2)/2;
@@ -68,43 +68,22 @@ classdef rover_RTD_planner < generic_RTD_planner
         
         %% online planning: process obstacles
         function determine_current_FRS(P,agent_info)
+            P.w0 = agent_info.yaw_rate(end);
             
-            P.current_FRS_index = NaN;
+            P.FRS_indicies_to_optimize_over = [];
             v0 = agent_info.state(agent_info.velocity_index,end);
-            h0 = agent_info.state(agent_info.heading_index,end);
             
             for i = 1:length(P.FRS)
-                if P.FRS{i}.v0_min == 0
-                    v0_min = -1;
-                else
-                    v0_min = P.FRS{i}.v0_min;
-                end
-                
-                if P.FRS{i}.v0_max == 2
-                    v0_max = 3;
-                else
-                    v0_max = P.FRS{i}.v0_max;
-                end
-                
-                if P.FRS{i}.psi0_max == 0
-                    psi0_max = 0;
-                    psi0_min = -Inf;
-                else
-                    psi0_max = Inf;
-                    psi0_min = 0;
-                end
-                
-                if v0 >= v0_min && v0 <= v0_max && h0 >= psi0_min && h0 <= psi0_max
-                    P.current_FRS_index = i;
-                    break
+                if v0 >= P.FRS{i}.v0_min && v0 <= P.FRS{i}.v0_max
+                   P.FRS_indicies_to_optimize_over = [P.FRS_indicies_to_optimize_over,i];
                 end
             end
           
         end
         
-        function process_world_info(P,world_info,~)
+        function process_world_info(P,world_info,idx)
             
-            F = P.FRS{P.current_FRS_index};
+            F = P.FRS{P.FRS_indicies_to_optimize_over(idx)};
             % process the w polynomial from the rover's FRS; this just
             % extracts the msspoly's powers and coefficients to speed up
             % evaluating the polynomial online
@@ -160,38 +139,37 @@ classdef rover_RTD_planner < generic_RTD_planner
                 %outside of a polygon that contains the reachable set for
                 %all trajecotry parameters
                 reachable_set_poly = [-0.3, 0.2,   1.75,  3.5,  3.5 ,  1.75, 0.2,-0.3,-0.3;...
-                      -0.2,-0.3,-1.5,-1.5,1.5  1.5,0.3,0.2,-0.2];
-                  
+                      -0.2,-0.3,-1.75,-1.75,1.75  1.75,0.3,0.2,-0.2];
+
                 L = inpolygon(O_center(1,:)',O_center(2,:)',reachable_set_poly(1,:),reachable_set_poly(2,:)');
                 O_center = O_center(:,L);
                 
                 O_FRS = (O_center+[x0;y0])./[Dx;Dy];
-
 
                 % get rid of obstacle points that are definitely unreachable
                 % because they lie outside of the unit circle in the FRS
                 % coordinate frame (this is because of how we create the SOS
                 % program to compute the FRS)
                 O_FRS = crop_points_outside_region(0,0,O_FRS,0.9) ;
-%                 O_mirrored_FRS = crop_points_outside_region(0,0,O_mirrored_FRS,0.9);
+
             else
                 O_FRS = [] ;
             end
             
             % save buffered, discretized obstacles
-            P.current_obstacles = O ;       
+            P.current_obstacles{idx} = O ;       
             
             % save the processed obstacles
-            P.current_obstacles_in_FRS_coords = O_FRS ;
+            P.current_obstacles_in_FRS_coordinates{idx} = O_FRS ;
+
         end
         
         %% online planning: cost function
-        function create_cost_function(P,agent_info,world_info,start_tic)
-            
-            P.create_waypoint(agent_info,world_info);
+        function create_cost_function(P,~,~,idx)
+           
             
             %get frs
-            F = P.FRS{P.current_FRS_index};
+            F = P.FRS{P.FRS_indicies_to_optimize_over(idx)};
             
             % get agent state
             z = P.agent_state ;
@@ -202,17 +180,19 @@ classdef rover_RTD_planner < generic_RTD_planner
             
             % create cost function
             w0_max = F.w0_des_max;
-            w0_min = -w0_max;
+            w0_min = F.w0_des_min;
             v_max = F.v_des_max;
             v_min = F.v_des_min;
+            
+            psi_end = bound_values(-z(3),F.psi_end_min,F.psi_end_max);
 
-            P.trajopt_problem.cost_function = @(k) cost_rover(P,k,-z(3),w0_max,w0_min,v_max,v_min,wp_local(1),wp_local(2),start_tic);
+            P.trajopt_problem.cost_function = @(k,start_tic) cost_rover(P,k,psi_end,w0_max,w0_min,v_max,v_min,wp_local(1),wp_local(2),start_tic);
         end
         
         function [c, gc] = cost_rover(P,k,psi_end,w0_max,w0_min,v_max,v_min,x_des,y_des,start_tic)     
             
-            c = rover_cost(k(1),psi_end,k(2),w0_max,w0_min,v_max,v_min,x_des,y_des,1,2);
-            gc = rover_cost_grad(k(1),psi_end,k(2),w0_max,w0_min,v_max,v_min,x_des,y_des,1,2);
+            c = rover_cost(k(1),psi_end,k(2),w0_max,w0_min,v_max,v_min,x_des,y_des,1,10);
+            gc = rover_cost_grad(k(1),psi_end,k(2),w0_max,w0_min,v_max,v_min,x_des,y_des,1,10);
             
             if toc(start_tic) > P.t_plan
                 error('Trajopt timed out!')
@@ -220,14 +200,10 @@ classdef rover_RTD_planner < generic_RTD_planner
         end
         
         %% online planning: constraint function
-        function create_constraints(P,start_tic)
+        function create_constraints(P,idx)
             % get the processed obstacles
-    
-            O = P.current_obstacles_in_FRS_coords ;
-  
-            
-            F = P.FRS{P.current_FRS_index};
-            
+            F = P.FRS{P.FRS_indicies_to_optimize_over(idx)};
+            O = P.current_obstacles_in_FRS_coordinates{idx};
             if ~isempty(O)
                 % remove NaNs
                 O_log = isnan(O(1,:)) ;
@@ -235,8 +211,10 @@ classdef rover_RTD_planner < generic_RTD_planner
 
                 % plug in to w polynomial to get list of constraints w(x,k) for
                 % each x \in O
-                w = P.w_polynomial_info ;
 
+                w = P.w_polynomial_info ;
+ 
+                 
                 wk = sub_z_into_w(w,O) ;
                 wkcoef = wk.wkcoef ;
                 wkpows = wk.wkpows ;
@@ -246,7 +224,7 @@ classdef rover_RTD_planner < generic_RTD_planner
                 N = wk.N ;
 
                 % create constraint function
-                P.trajopt_problem.nonlcon_function = @(k) P.nonlcon_rover(k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic) ;
+                P.trajopt_problem.nonlcon_function = @(k,start_tic) P.nonlcon_rover(k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic) ;
             else
                 % if there are no obstacles then we don't need to consider
                 % any constraints
@@ -256,34 +234,45 @@ classdef rover_RTD_planner < generic_RTD_planner
             
             w0_des_max  = F.w0_des_max;
             w0_des_min =  F.w0_des_min;
+            if isfield(F,'diff_w')
+            diff_w = F.diff_w;
+            else
+            diff_w = 2;
+            end
             
             v_des_max = F.v_des_max;
             v_des_min = F.v_des_min;
-            diff_v = F.diff_v;
+            diff_v    = F.diff_v;
             v0 = P.agent_state(4);
             
-            psi_end_max = 0.5;
-            psi_end_min = -0.5;
-            
-            psi_end = -P.agent_state(3);
+            psi_end_max = F.psi_end_max;
+            psi_end_min = F.psi_end_min;
+            psi_end = bound_values(-P.agent_state(3),F.psi_end_min,F.psi_end_max);
             
             lower_k3 = ((v0-diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
             upper_k3 = ((v0+diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
             
-            upper_psi_end = -w0_des_max/psi_end_min*psi_end+w0_des_max;
-            lower_psi_end = -w0_des_min/psi_end_max*psi_end+w0_des_min;
+            lower_k1 = ((P.w0-diff_w)-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
+            upper_k1 = ((P.w0+diff_w)-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
             
-            upper_k1 = (upper_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
-            lower_k1 = (lower_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
+            upper_psi_end = -1/psi_end_min*psi_end+1;
+            lower_psi_end = 1/psi_end_max*psi_end-1;
+            
+            upper_k1 = min(upper_k1,(upper_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1);
+            lower_k1 = max(lower_k1,(lower_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1);
              
             % create the inequality constraints and problem bounds
             P.trajopt_problem.Aineq = [];
             
-            P.trajopt_problem.bineq = [] ;
-
-            P.trajopt_problem.k_bounds = [max([lower_k1,-1],[],'omitnan'),min([upper_k1,1],[],'omitnan');...
-                    max([lower_k3,-1]),min([upper_k3,1]) ];
+            P.trajopt_problem.bineq =[] ;
          
+                         P.trajopt_problem.k_bounds = [max([lower_k1,-1],[],'omitnan'),min([upper_k1,1],[],'omitnan');...
+                    max([lower_k3,-1]),min([upper_k3,1]) ];
+                
+                if any(P.trajopt_problem.k_bounds(:,2)-P.trajopt_problem.k_bounds(:,1) <0)
+                   a = 1; 
+                end
+      
             
         end
         
@@ -291,10 +280,11 @@ classdef rover_RTD_planner < generic_RTD_planner
         
         function [n, neq, gn, gneq] = nonlcon_rover(P,k,wkcoef,wkpows,Jcoef,Jpows,N,start_tic)
             % constraint is active when p(k) > 0
-            n = eval_w(k,wkcoef,wkpows) ;
-            neq = zeros(size(n)) ;
-            gn = eval_J(k,Jcoef,Jpows,N)' ;
-            gneq = zeros(size(gn)) ;
+      
+                n = eval_w(k,wkcoef,wkpows) ;
+                neq = zeros(size(n)) ;
+                gn = eval_J(k,Jcoef,Jpows,N)' ;
+                gneq = zeros(size(gn)) ;
            
             if toc(start_tic) > P.t_plan
                 error('Trajopt timed out!')
@@ -329,7 +319,7 @@ classdef rover_RTD_planner < generic_RTD_planner
             v_des_max = F.v_des_max;
             v_des_min = F.v_des_min;
             
-            psi_end = bound_values(-P.agent_state(3),-0.5,0.5);
+            psi_end = bound_values(-P.agent_state(3),F.psi_end_min,F.psi_end_max);
             
             pose0 = P.agent_state([agent_info.position_indices,agent_info.heading_index]);
       
@@ -344,7 +334,7 @@ classdef rover_RTD_planner < generic_RTD_planner
             
             %rotate and place at current position/heading
             Z_out(1:2,:) = rotation_matrix_2D(pose0(3))*Z_out(1:2,:)+pose0(1:2);
-            Z_out(3,:) =   wrapToPi(Z_out(3,:)+pose0(3));
+            Z_out(3,:) = wrapToPi(Z_out(3,:)+pose0(3));
             
             %update current plan 
             P.current_plan = Z_out(1:2,:);
@@ -357,7 +347,7 @@ classdef rover_RTD_planner < generic_RTD_planner
                color = [0 0 1];
            end
            
-           plot@generic_RTD_planner(P,color)
+           plot@multiFRS_RTD_planner(P,color)
            
            
             if P.plot_FRS_flag
@@ -371,14 +361,14 @@ classdef rover_RTD_planner < generic_RTD_planner
                     F = P.FRS{P.latest_plan.current_FRS_index};
                     k = F.k;
                     y = F.y;
+                    w = F.w;
                     
                     pose0 = P.latest_plan.agent_state(1:3);
                     
                     psiend_k2 = (-pose0(3)-F.psi_end_min)*2/(F.psi_end_max-F.psi_end_min)-1;
                     psiend_k2 = bound_values(psiend_k2,1);
-
                     
-                    wx = subs(F.w,k,[k_opt(1);psiend_k2;k_opt(2)]);
+                    wx = subs(w,k,[k_opt(1);psiend_k2;k_opt(2)]);
                     
                     h = get_2D_msspoly_contour(wx,[F.x;y],1,'Scale',F.xscale,'Offset',-F.xoffset,'pose',pose0);
                     
@@ -388,13 +378,6 @@ classdef rover_RTD_planner < generic_RTD_planner
                     else
                         P.plot_data.FRS_contour.XData = h(1,:);
                         P.plot_data.FRS_contour.YData = h(2,:);
-                    end
-                else
-                    
-                     if check_if_plot_is_available(P,'FRS_contour')
-                  
-                        P.plot_data.FRS_contour.XData =  P.plot_data.FRS_contour.XData;
-                        P.plot_data.FRS_contour.YData = P.plot_data.FRS_contour.YData;
                     end
                     
                 end

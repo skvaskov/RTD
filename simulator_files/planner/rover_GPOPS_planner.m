@@ -3,8 +3,6 @@ classdef rover_GPOPS_planner< planner
     % implementation-specific properties
         gpops_problem
         C % parallel cluster so we can run jobs with a timeout
-        waypoint_planner
-        waypoint_distance
 
         braking_flag
         stop_flag
@@ -14,8 +12,8 @@ classdef rover_GPOPS_planner< planner
         agent_state % current state
         
         use_coarse_initial_guess = true
-        t_min=0.5 % lower bound on timing, can be used to encourage safety
-        t_max=1.5% upper bound on timing, encourages robot to go faster
+        T_min=0.5 % lower bound on timing, can be used to encourage safety
+        T_max=1.5% upper bound on timing, encourages robot to go faster
         
         upper_boundary
         lower_boundary
@@ -25,7 +23,7 @@ classdef rover_GPOPS_planner< planner
         max_heading = 0.6;
         
         lookahead_distance = 4;
-        
+        desired_speed = 2;
         max_speed = 2;
         min_speed = 0;
         max_wheelangle = 0.5;
@@ -143,7 +141,7 @@ classdef rover_GPOPS_planner< planner
        P.gpops_problem.auxdata.goal = wp;
         
 
-   
+   %we will just use limits on the y state for road boundaries
 %           Npred=length(move_idxs)-1;   
 %          Aineq_road = zeros( 4 * Npred, 2 );
 %          bineq_road = zeros( 4 * Npred, 1 );
@@ -242,13 +240,13 @@ classdef rover_GPOPS_planner< planner
         % reset timer
        P.gpops_problem.auxdata.timer_start = tic ;
        
-%         try
+         try
             P.vdisp('Running GPOPS.',5)
             output = gpops2(gp) ;
-%         catch
-%              P.vdisp('GPOPS errored!',5)
-%              output = [] ;
-%          end
+         catch
+              P.vdisp('GPOPS errored!',5)
+              output = [] ;
+          end
 
         if ~isempty(output)
             P.vdisp('GPOPS converged successfully!',3)
@@ -278,8 +276,6 @@ classdef rover_GPOPS_planner< planner
             Uout = [0,0;0,0] ;
             Zout = [P.agent_state,P.agent_state] ;
         end
-
-       % Uout = [Uout ; zeros(size(Tout))] ;
         
         P.info = I ;
         
@@ -296,8 +292,8 @@ classdef rover_GPOPS_planner< planner
     function out = make_GPOPS_problem_object(P,~,world_info)
         bounds.phase.initialtime.lower = 0 ;
         bounds.phase.initialtime.upper = 0 ;
-        bounds.phase.finaltime.lower   = P.t_min ;
-        bounds.phase.finaltime.upper   = P.t_max ;
+        bounds.phase.finaltime.lower   = P.T_min ;
+        bounds.phase.finaltime.upper   = P.T_max ;
 
         % state bounds, states z = [x,y,h,vx,delta]
 
@@ -328,7 +324,7 @@ classdef rover_GPOPS_planner< planner
         bounds.phase.integral.upper=1000000;
         
         % default initial guess
-        t_guess = [0; P.t_max];
+        t_guess = [0; P.T_max];
         spd_guess = [P.max_speed ; P.max_speed ];
         wa_guess = [0 ; 0 ];
 
@@ -348,7 +344,7 @@ classdef rover_GPOPS_planner< planner
         % obstacle gpops_problem
         auxdata.timer_start = tic ;
         auxdata.timeout = P.timeout ;
-        auxdata.desired_speed = vxmax;
+        auxdata.desired_speed = P.desired_speed;
 
         % finalize setting up GPOPS problem object
         out.bounds = bounds ;
@@ -406,7 +402,7 @@ lr = 0.0765;
     Npoints = size( input.phase.state( :, 1 ), 1 );
     
     
- %check if we are on road
+ %do not need these (use state constraint to check if we are on road)
 % testpoints = input.auxdata.Aineq{1} * [ input.phase.state( :, 1 ) input.phase.state( :, 2 ) ]' - input.auxdata.bineq{1};
 % road_check = min( reshape( max( reshape( testpoints, 4, Npoints * input.auxdata.Npred ) ), input.auxdata.Npred, Npoints ) )';
 
