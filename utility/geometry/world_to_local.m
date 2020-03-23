@@ -8,7 +8,7 @@ function P_out = world_to_local(robot_pose, P_world)
 %
 % Author: Sean Vaskov and Shreyas Kousik
 % Created: 2016
-% Updated: 29 Oct 2019
+% Updated: 19 Mar 2020
 %
 % See also: world_to_local, world_to_FRS, FRS_to_world
 
@@ -31,7 +31,7 @@ function P_out = world_to_local(robot_pose, P_world)
     P_out(1:2,:) = R*P_out(1:2,:) ;
     
     % if the input had a heading, rotate it
-    if N_cols > 2
+    if N_rows > 2
         P_out(3,:) = P_out(3,:) - h ;
     end
  end

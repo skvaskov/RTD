@@ -3,7 +3,7 @@ classdef segway_agent < RTD_agent_2D
         % dynamics bounds
         max_speed = 1.5 ; % m/s
         max_accel = 3.75 % m/s^2
-        max_yaw_rate = 1.25 ; % rad/s
+        max_yaw_rate = 1.0 ; % rad/s
         max_yaw_accel = 5.9 ; % rad/s^2 ;
         
         % state indices
@@ -38,6 +38,7 @@ classdef segway_agent < RTD_agent_2D
             I = get_agent_info@RTD_agent_2D(A) ;
             I.yaw_rate_index = A.yaw_rate_index ;
             I.speed_index = A.speed_index ;
+            I.max_speed = A.max_speed ;
             I.max_accel = A.max_accel ;
             I.max_yaw_rate = A.max_yaw_rate ;
         end
