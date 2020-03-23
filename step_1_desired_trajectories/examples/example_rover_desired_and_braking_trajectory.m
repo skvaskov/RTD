@@ -9,7 +9,7 @@ close all
 %
 %% user parameters
 t_f = 2 ;
-w_0 = 1 ; % rad/s
+w_0 = 0.5 ; % rad/s
 psi_end = 0;
 v_des = 2.0 ; % m/s
 t_plan = 0.5; %s

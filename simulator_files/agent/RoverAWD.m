@@ -13,7 +13,7 @@ classdef RoverAWD < RTD_agent_2D
         function A = RoverAWD(varargin)
             % set up default superclass values
             name = 'RoverAWD' ;
-            default_footprint = [0.5 0.2] ;
+            default_footprint = [0.5 0.29] ;
             n_states = 5 ;
             n_inputs = 2 ; % two reference actually
             stopping_time = 3; % conservative estimate
@@ -51,8 +51,7 @@ classdef RoverAWD < RTD_agent_2D
             if nargin < 6
                 Z = [] ;
             end
-         
-            lr = A.rear_axel_to_center_of_mass;
+    
             
             % extract the states
             h = z(A.heading_index) ;
@@ -84,12 +83,39 @@ classdef RoverAWD < RTD_agent_2D
             xd = v*cos(h)-vy*sin(h);
             yd = v*sin(h)+vy*cos(h);
             hd = w ;
-            vd = cr-1.4736*(v-v_des)+0.1257*(v-v_des)^2;
+            if v_des == 0 && abs(v) <0.1
+              vd = -30*(v-v_des);
+            elseif v_des == 0 && abs(v) < 0.5
+              vd = -4*(v-v_des);
+            else
+               vd = cr-1.4736*(v-v_des)+0.1257*(v-v_des)^2; 
+            end
             deltad = -5*(wheelangle-delta_des);
             % return state derivative
             zd = [xd ; yd ; hd ; vd;deltad] ;
+            
         end
         
+                %% get agent into
+        function agent_info = get_agent_info(A)
+            % call superclass method
+            agent_info = get_agent_info@agent(A) ;
+            
+            % additional fields
+            agent_info.input = A.input;
+            agent_info.input_time = A.input_time;
+            agent_info.heading_index = A.heading_index ;
+            agent_info.velocity_index = 4;
+            agent_info.yaw_rate = A.wheelangle_to_yawrate(A.state(4,:),A.state(5,:));
+            agent_info.desired_time = A.desired_time ;
+            agent_info.desired_input = A.desired_input ;
+            agent_info.desired_trajectory = A.desired_trajectory ;
+            agent_info.heading_index = A.heading_index ;
+            agent_info.footprint = A.footprint ;
+            agent_info.footprint_vertices = A.footprint_vertices ;
+            agent_info.wheelbase = A.wheelbase;
+            agent_info.rear_axel_to_center_of_mass = A.rear_axel_to_center_of_mass;
+        end
      end
     
 end
