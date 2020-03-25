@@ -153,10 +153,10 @@ classdef RTD_agent_2D < agent
                 case 1
                     % btw, this is 0.4x because the footprint is a radius
                     x_arrow = 0.4*A.footprint*cos(t_arrow) ;
-                    y_arrow = 0.4*A.footprint*sin(t_arrow) ;
+                    y_arrow = 0.25*A.footprint*sin(t_arrow) ;
                 case 2
                     x_arrow = 0.2*A.footprint(1)*cos(t_arrow) ;
-                    y_arrow = 0.2*A.footprint(2)*sin(t_arrow) ;
+                    y_arrow = 0.1*A.footprint(2)*sin(t_arrow) ;
             end
             A.arrow_vertices = [x_arrow ; y_arrow] ;
         end

@@ -1,0 +1,8 @@
+%% description
+
+%% automated from here
+summary_save_filename_header = 'segway_RRT_experiment_1_summary' ;
+f = dir(pwd) ;
+
+goal = [] 
+crashes = [

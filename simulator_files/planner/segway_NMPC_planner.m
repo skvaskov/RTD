@@ -13,7 +13,7 @@ classdef segway_NMPC_planner < segway_generic_planner
         % GPOPS-specific properties
         gpops_problem % problem structure to use
         parallel_cluster % so we can run jobs with a timeout
-        spin_flag = true ; % spin to face the first waypoint in the first iteration
+        initial_condition_epsilon = 0.005.*ones(1,5) ; % wiggle room for initial condition
         use_coarse_initial_guess_flag
         t_min = 0.5 ; % lower bound on timing, can be used to encourage safety
         t_max = 2 ;% upper bound on timing, encourages robot to go faster
@@ -37,44 +37,25 @@ classdef segway_NMPC_planner < segway_generic_planner
         
         %% setup
         function setup(P,agent_info,world_info)
-        % 1. set up info from agent and world
-            P.agent_max_accel = agent_info.max_accel ;
-            P.agent_max_yaw_rate = agent_info.max_yaw_rate ;
-            b = P.buffer + agent_info.footprint ;
-            P.bounds = world_info.bounds + [b -b b -b] ;
+        % 1. call superclass method
+            setup@segway_generic_planner(P,agent_info,world_info) ;
             
-        % 2. set up high-level planner
-            P.HLP.setup(agent_info,world_info) ;
-            P.HLP.default_lookahead_distance = P.lookahead_distance ;
-            
-        % 3. create GPOPS problem object
+        % 2. create GPOPS problem object
             P.gpops_problem = P.make_GPOPS_problem_object(agent_info,world_info) ;
             
-        % 4. set up to spin towards waypoint on first iteratino
-            P.spin_flag = true ;
-            
-        % 5. initialize current plan
-            P.current_plan.T = [] ;
-            P.current_plan.U = [] ;
-            P.current_plan.Z = [] ;
-            
-        % 6. call IPOPT once to prevent errors (this is a bug in GPOPS)
+        % 3. call IPOPT once to prevent errors (this is a bug in GPOPS)
             try
                 ipopt
             catch
             end
-            
-        % 7. set up info structure
-            P.info = struct('agent_time',[],'agent_state',[],...
-                'waypoint',[],...
-                'obstacles',[],...
-                'T',[],'U',[],'Z',[]) ;
         end
         
         %% replan
         function [T,U,Z] = replan(P,agent_info,world_info)
+        % 0. start timing
+            start_tic = tic ;
+            
         % 1. get agent info
-            z_cur = agent_info.state(:,end) ;
             P.agent_average_speed = get_segway_average_speed(agent_info.time,...
                 agent_info.state(agent_info.speed_index,:),...
                 P.agent_average_speed_time_horizon) ;
@@ -89,6 +70,14 @@ classdef segway_NMPC_planner < segway_generic_planner
             P.current_waypoint = z_goal ;
             
         % 4. set up GPOPS problem
+            try
+                P.vdisp('Getting initial condition from previous plan',5)
+                z_cur = match_trajectories(P.t_move,P.current_plan.T, P.current_plan.Z) ;
+            catch
+                P.vdisp('Previous plan unavailable! Getting initial condition from agent',6)
+                z_cur = agent_info.state(:,end) ;
+            end
+        
             % initial guess
             [T_guess,U_guess,Z_guess] = P.make_GPOPS_initial_guess(agent_info,...
                 z_goal,P.use_coarse_initial_guess_flag) ;
@@ -96,77 +85,52 @@ classdef segway_NMPC_planner < segway_generic_planner
             P.gpops_problem.guess.phase.control = U_guess' ;
             P.gpops_problem.guess.phase.state = Z_guess' ;
             
-            P.gpops_problem.bounds.phase.initialstate.lower = z_cur' ;
-            P.gpops_problem.bounds.phase.initialstate.upper = z_cur' ;
+            P.gpops_problem.bounds.phase.initialstate.lower = z_cur' - P.initial_condition_epsilon(:)' ;
+            P.gpops_problem.bounds.phase.initialstate.upper = z_cur' + P.initial_condition_epsilon(:)' ;
             
             P.gpops_problem.auxdata.obs.A = A_O ;
             P.gpops_problem.auxdata.obs.b = b_O ;
             P.gpops_problem.auxdata.obs.N_obs = N_obs ;
             P.gpops_problem.auxdata.obs.N_halfplanes = N_halfplanes ;
             
-            
             % goal
             P.gpops_problem.auxdata.goal_position = z_goal ;
             P.gpops_problem.auxdata.goal_heading = atan2(z_goal(2) - z_cur(2), z_goal(1) - z_cur(1)) ;
             
         % 5. run GPOPS
-            P.gpops_problem.auxdata.start_tic = tic ;
+            P.gpops_problem.auxdata.start_tic = start_tic ;
             
-%             try
+            try
                 P.vdisp('Running GPOPS.',5)
                 gp = P.gpops_problem ;
                 output = gpops2(gp) ;
-%             catch
-%                 P.vdisp('GPOPS errored!',5)
-%                 output = [] ;
-%             end
+            catch
+                P.vdisp('GPOPS errored!',5)
+                output = [] ;
+            end
         
         % 6. process trajectory plan
             [T,U,Z] = P.process_traj_opt_result(output,agent_info) ;
             
-        % 7. update P.info
+        % 7. update current plan and info
             P.current_plan.T = T ;
             P.current_plan.U = U ;
             P.current_plan.Z = Z ;
-        end
-        
-        %% replan: process obstacles
-        function [O_buf,A_O,b_O,N_obs,N_halfplanes] = process_obstacles(P,world_info)
-            % create buffered obstacles
-            O = world_info.obstacles ;
-            O_buf = [] ;
-            A_O = [] ;
-            b_O = [] ;
+            P.update_info(agent_info,z_goal,O_buf,T,U,Z) ;
             
-            % make sure O does not have a column of nans to start
-            if isnan(O(1,1))
-                O = O(:,2:end) ;
-            end
-            
-            % create buffered obstacles and halfplane representations
-            N_O = size(O,2) ;
-            N_obs = ceil(N_O/6) ;
-            for idx = 1:6:N_O
-                % get obstacle (we know it's a written as 5 points in CCW
-                % order, so we can cheat a bit here)
-                o = O(:,idx:idx+4) ;
-                
-                % create buffered obstacles
-                o_buf = buffer_box_obstacles(o,P.buffer,13) ;
-                O_buf = [O_buf, nan(2,1), o_buf] ;
-                
-                % create halfplane representation for collision checking
-                [A_idx,b_idx] = vert2lcon(o_buf') ;
-                A_O = [A_O ; A_idx] ;
-                b_O = [b_O ; b_idx] ;
-                
-                % get the number of halfplanes (thank goodness this ends up
-                % being exactly the same for every obstacle, saving us a
-                % lot of work)
-                N_halfplanes = length(b_idx) ;
-            end
-            
-            P.current_obstacles = O_buf ;
+        % 8. FOR DEBUGGING, plot the current plan
+            % if ~isempty(Z)
+            %     % create object to plot
+            %     Z_plot = Z ;
+            %     Z_plot(1:2,:) = Z(1:2,:) - Z(1:2,1) ; 
+            % 
+            %     % plot!
+            %     figure(2) ; clf ; 
+            %     plot(T,Z_plot')
+            %     xlabel('time')
+            %     ylabel('states')
+            %     legend('x','y','\theta','\omega','v')
+            % end
         end
         
         %% replan: make initial guess
@@ -214,53 +178,6 @@ classdef segway_NMPC_planner < segway_generic_planner
                 P.vdisp('GPOPS did not find a solution',4)
                 [T,U,Z] = P.make_plan_for_traj_opt_failure(agent_info) ;
             end
-        end
-        
-        %% plotting
-        function plot(P,~)
-            hold_check = hold_switch() ;
-            
-            % plot trajectory plan
-            Z = P.current_plan.Z ;
-            if ~isempty(Z)
-                if check_if_plot_is_available(P,'trajectory')
-                    P.plot_data.trajectory.XData = Z(1,:) ;
-                    P.plot_data.trajectory.XYData = Z(2,:) ;
-                else
-                    d = plot_path(Z(1:2,:),'b--') ;
-                    P.plot_data.trajectory = d ;
-                end
-            end
-            
-            % plot obstacles
-            O = P.current_obstacles ;
-            if ~isempty(O)
-                if check_if_plot_is_available(P,'obstacles')
-                    P.plot_data.obstacles.XData = O(1,:) ;
-                    P.plot_data.obstacles.YData = O(2,:) ;
-                else
-                    d = plot_path(O,'-','color',[1 0.5 0.5]) ;
-                    P.plot_data.obstacles = d ;
-                end
-            end
-            
-            % plot waypoint
-            waypoint = P.current_waypoint ;
-            if P.plot_waypoints_flag && ~isempty(waypoint)
-                if check_if_plot_is_available(P,'waypoint')
-                    P.plot_data.waypoint.XData = waypoint(1) ;
-                    P.plot_data.waypoint.YData = waypoint(2) ;
-                else
-                    d = plot_path(waypoint,'kp') ;
-                    P.plot_data.waypoint = d ;
-                end
-            end
-            
-            if P.plot_HLP_flag
-                plot(P.HLP) ;
-            end
-            
-            hold_switch(hold_check) ;
         end
         
         %% make GPOPS problem object
@@ -345,15 +262,14 @@ function out = gpops_segway_dynamics(input)
     k_2 = input.phase.control(:, 2);
 
     % yaw rate input
-    wdes = k_1 ;
-    Kg = 2.95 ;
-    g = Kg*(wdes - w) ;
+    w_des = k_1 ;
+    K_g = 2.95 ;
+    g = K_g*(w_des - w) ;
 
     % acceleration input
-    vdes = k_2 ;
-    vdelta = vdes - v ;
-    Ka = 3 ;
-    a = Ka*vdelta ;
+    v_des = k_2 ;
+    K_a = 3 ;
+    a = K_a*(v_des - v) ;
 
     x_dot     = v .* cos(h) ;
     y_dot     = v .* sin(h) ;
@@ -375,8 +291,7 @@ function out = gpops_segway_dynamics(input)
     X = [x y]' ;
     
     % check all the points (note, the last line of this check would usually
-    % be -min(.), but GPOPS needs the opposite, where constraints are
-    % negative when they are satisfied, for some reason)
+    % be -min(.), but GPOPS needs the opposite)
     X_chk = A*X - b ;
     X_chk = reshape(X_chk,N_halfplanes,[]) ;
     X_chk = reshape(max(X_chk,[],1),N_obs,[]) ;

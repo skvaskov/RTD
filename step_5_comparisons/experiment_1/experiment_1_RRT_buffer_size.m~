@@ -1,0 +1,78 @@
+%% description
+% This script run the RRT planner with several different buffer sizes on
+% randomly-generated worlds, to determine which buffer size is best
+%
+% Author: Shreyas Kousik
+% Created: 24 Mar 2020
+% Updated: -
+%
+%% user parameters
+% worlds
+N_worlds
+N_obstacle_bounds = [5,10] ;
+bounds = [-4,5,-2.5,2.5] ;
+goal_radius = 0.5 ;
+
+% planner
+additional_buffers = [0.0, 0.05, 0.10, 0.15] ; % m (this is added to the agent footprint)
+t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+t_move = 0.5 ;
+plot_HLP_flag = true ;
+plot_waypoints_flag = true ;
+
+% simulation
+verbose_level = 2 ;
+max_sim_time = 50 ;
+max_sim_iterations = 100 ;
+
+% file i/o
+load_worlds_flag = 
+save_flag = true ;
+
+
+%% automated from here
+% create agent
+A = segway_agent() ;
+
+% create planners
+P = {} ;
+p_idx = 1 ;
+for buffer = additional_buffers
+    HLP = RRT_star_HLP('grow_tree_mode','new',...
+        'plot_while_growing_tree_flag',false,...
+        'new_node_max_distance_from_agent',A.sensor_radius - A.footprint) ;
+    
+    P{p_idx} = segway_RRT_planner('verbose',verbose_level,'buffer',A.footprint + buffer,...
+        'HLP',HLP,'t_plan',t_plan,'t_move',t_move,...
+        'plot_HLP_flag',plot_HLP_flag,...
+        'plot_waypoints_flag',plot_waypoints_flag) ;
+    p_idx = p_idx + 1 ;
+end
+
+% create worlds
+W_all = {} ;
+for w_idx = 1:N_worlds
+    N_obstacles = rand_int(N_obstacle_bounds(1),N_obstacle_bounds(2)) ;
+    
+    W{w_idx} = static_box_world('bounds',bounds,'N_obstacles',N_obstacles,'buffer',buffer,...
+        'verbose',verbose_level,'goal_radius',goal_radius,...
+        'obstacle_size_bounds',[0.3, 0.3]) ;
+end
+
+if save_flag
+    save(worlds_save_filename, 'W_all')
+end
+
+%% run simulations
+for idx = 1:N_worlds
+    S = simulator(A,W,P,'allow_replan_errors',false,'verbose',verbose_level,...
+        'max_sim_time',max_sim_time,...
+        'max_sim_iterations',max_sim_iterations,...
+        'plot_while_running',false) ;
+    
+    summary = S.run() ;
+    
+    if save_flag
+        save(summary_save_filename, 'summary')
+    end
+end
