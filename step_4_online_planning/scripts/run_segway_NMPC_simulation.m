@@ -4,7 +4,7 @@
 %
 % Author: Shreyas Kousik
 % Created: 21 Mar 2020
-% Updated: 23 Mar 2020
+% Updated: 25 Mar 2020
 %
 %% user parameters
 % world
@@ -38,8 +38,6 @@ P = segway_NMPC_planner('verbose',verbose_level,'buffer',buffer,...
     't_plan',t_plan,'t_move',t_move,...
     'plot_HLP_flag',plot_HLP_flag,...
     'plot_waypoints_flag',plot_waypoints_flag) ;
-
-P.HLP = RRT_star_HLP('grow_tree_mode','new','plot_while_growing_tree_flag',false) ;
 
 W = static_box_world('bounds',bounds,'N_obstacles',N_obstacles,'buffer',buffer,...
     'verbose',verbose_level,'goal_radius',goal_radius,...

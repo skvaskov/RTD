@@ -104,6 +104,11 @@ classdef segway_RTD_planner < segway_generic_planner
         % 3. set up high level planner
             P.vdisp('Setting up high-level planner',4)
             
+            if isa(P.HLP,'segway_grid_HLP')
+                P.vdisp('Adjusting HLP buffer!',7)
+                P.HLP.buffer = P.agent_footprint ;
+            end
+            
             P.HLP.setup(agent_info,world_info) ;
             P.HLP.default_lookahead_distance = P.lookahead_distance ;
             
@@ -163,7 +168,7 @@ classdef segway_RTD_planner < segway_generic_planner
                 agent_info.state(agent_info.speed_index,:),...
                 P.agent_average_speed_time_horizon) ;
             
-        % 2. process obstacles
+        % 2. process obstacles for RTD
             [O,O_FRS,O_pts] = P.process_obstacles(agent_info,world_info,FRS_cur) ;
             
             % save obstacles
@@ -172,7 +177,9 @@ classdef segway_RTD_planner < segway_generic_planner
             P.current_obstacles_in_FRS_coords = O_FRS ;
             
         % 3. create the cost function for trajectory optimization
-            z_goal = P.get_waypoint(O,agent_info,world_info) ;
+            [world_info,~] = P.process_world_info(world_info,...
+                P.agent_footprint + P.buffer_for_HLP) ;
+            z_goal = P.get_waypoint(agent_info,world_info) ;
             cost = P.create_cost_function(FRS_cur,agent_info,z_goal,start_tic) ;
             
         % 4. create the constraints for fmincon
@@ -191,7 +198,7 @@ classdef segway_RTD_planner < segway_generic_planner
             P.current_plan.Z = Z ;
             
         % 7. update the info structure
-            P.update_info(agent_info,z_goal,O,T,U,Z) ;
+            P.update_info(agent_info,z_goal,T,U,Z) ;
             
             % add additional info
             I = P.info ;
@@ -242,27 +249,7 @@ classdef segway_RTD_planner < segway_generic_planner
             [O_FRS, ~, O_pts] = P.discretize_and_scale_obstacles(O,...
                     agent_state,P.buffer,P.point_spacing,FRS_cur) ;
         end
-        
-        %% replan: get waypoint
-        function z_goal = get_waypoint(P,O,agent_info,world_info)
-            P.vdisp('Getting waypoint',5)
-            
-            % buffer obstacles for high-level planner
-            O_HLP = buffer_polygon_obstacles(O,P.agent_footprint + P.buffer_for_HLP) ;
-            world_info.obstacles = O_HLP ;
-            
-            % make a waypoint (this is wrapped in a try/catch in case the
-            % waypoint planner has bugs)
-            try
-                lkhd = (P.agent_average_speed + P.lookahead_distance) / 2 ;
-                z_goal = P.HLP.get_waypoint(agent_info,world_info,lkhd) ;
-            catch
-                P.vdisp('Waypoint creation errored! Using global goal instead',6)
-                z_goal = P.HLP.goal ;
-            end
-            P.current_waypoint = z_goal ;
-        end
-        
+                
         %% replan: make cost and constraints
         function cost = create_cost_function(P,FRS_cur,agent_info,z_goal,start_tic)
             P.vdisp('Creating cost function',4)

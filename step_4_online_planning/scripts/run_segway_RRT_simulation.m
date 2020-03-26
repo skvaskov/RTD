@@ -4,7 +4,7 @@
 %
 % Author: Shreyas Kousik
 % Created: 24 Mar 2020
-% Updated: -
+% Updated: 25 Mar 2020
 %
 %% user parameters
 % world
@@ -32,13 +32,10 @@ animate_after_simulating_flag = false ;
 %% automated from here
 A = segway_agent() ;
 
-buffer = A.footprint + additional_buffer ; 
-HLP = RRT_star_HLP('grow_tree_mode','new',...
-    'plot_while_growing_tree_flag',false,...
-    'new_node_max_distance_from_agent',A.sensor_radius - A.footprint) ;
+buffer = A.footprint + additional_buffer ;
 
 P = segway_RRT_planner('verbose',verbose_level,'buffer',buffer,...
-    'HLP',HLP,'t_plan',t_plan,'t_move',t_move,...
+    't_plan',t_plan,'t_move',t_move,...
     'plot_HLP_flag',plot_HLP_flag,...
     'plot_waypoints_flag',plot_waypoints_flag) ;
 

@@ -110,24 +110,15 @@ classdef segway_RRT_planner < segway_generic_planner
                 P.agent_average_speed_time_horizon) ;
         
         % 2. set up obstacles
-            [O_buf,A_obs,b_obs,N_obs,N_hfp] = P.process_obstacles(world_info) ;
+            [world_info,O_str] = P.process_world_info(world_info,P.buffer) ;
         
         % 3. get waypoint to grow RRT towards
-            lkhd = (P.agent_average_speed + P.lookahead_distance) / 2 ;
-            world_info.obstacles = O_buf ;
-            z_goal = P.HLP.get_waypoint(agent_info,world_info,lkhd) ;
-            P.current_waypoint = z_goal ;
+            z_goal = P.get_waypoint(agent_info,world_info) ;
             
         % 3. grow the RRT
             P.vdisp('Growing RRT',4)
             t_cur = toc(start_tic) ;
             P.initialize_tree(agent_info) ;
-            
-            % make sure we're not planning from inside any obstacles
-            collision_node_log = P.collision_check(P.nodes(1:2,:),A_obs,b_obs,N_hfp,N_obs) ;
-            if any(~collision_node_log)
-                disp('hey!')
-            end
             
             waypoint_not_reached_flag = true ;
             
@@ -158,7 +149,7 @@ classdef segway_RRT_planner < segway_generic_planner
                     (X_new(2,:) >= P.bounds(3)) & (X_new(2,:) <= P.bounds(4)) ;
                 B_chk = all(B_chk) ;
                 
-                if B_chk && all(P.collision_check(X_new,A_obs,b_obs,N_hfp,N_obs))
+                if B_chk && (~any(check_points_in_halfplane_obstacles(X_new,O_str)))
                     % update the tree
                     N = P.N_nodes + 1 ;
                     P.nodes(:,N) = Z_new(:,end) ;
@@ -193,7 +184,7 @@ classdef segway_RRT_planner < segway_generic_planner
             P.current_plan.T = T ;
             P.current_plan.U = U ;
             P.current_plan.Z = Z ;
-            P.update_info(agent_info,z_goal,O_buf,T,U,Z) ;
+            P.update_info(agent_info,z_goal,T,U,Z) ;
         end
         
         %% replan: sample random yaw rate and speed
@@ -214,21 +205,12 @@ classdef segway_RRT_planner < segway_generic_planner
             v_cur = z(5) ;
             v_des_lo = max(v_cur - P.delta_v, 0) ;
             v_des_hi = min(v_cur + P.delta_v, P.agent_max_speed) ;
-            v_mean = 3*P.agent_max_speed/4 ;
-            v_std = P.agent_max_speed/2 ;
+            v_mean = P.agent_max_speed ;
+            v_std = P.agent_max_speed/4 ;
             v_des = rand_range(v_des_lo,v_des_hi,v_mean,v_std) ;
             
             % return output
             u = [w_des ; v_des] ;
-        end
-        
-        %% replan: collision check
-        function out = collision_check(P,X,A_obs,b_obs,N_hfp,N_obs)
-            % return TRUE if NOT in collision
-            out = A_obs*X - b_obs ;
-            out = reshape(out,N_hfp,[]) ;
-            out = reshape(max(out,[],1),N_obs,[]) ;
-            out = (-min(out,[],1)) < 0 ;
         end
         
         %% replan: find best path
@@ -309,15 +291,22 @@ classdef segway_RRT_planner < segway_generic_planner
                 T = linspace(0,t_f,size(Z,2)) ;
                 
                 % convert last bit of the traj to braking
-                [T,U,Z] = convert_segway_desired_to_braking_traj(P.t_plan,T,U,Z) ;
-                
-                if any(isnan(Z(:)))
-                    disp('hey!')
-                end
+                v_max = max(Z(5,:)) ; % max commanded speed
+                t_brk = v_max ./ P.agent_max_accel ;
+                t_begin_brk = max([T(end) - t_brk, 0]) ;
+                [T,U,Z] = convert_segway_desired_to_braking_traj(t_begin_brk,...
+                    T,U,Z) ;
             else
                 P.vdisp('RRT did not find a new plan',4)
                 [T,U,Z] = P.make_plan_for_traj_opt_failure(agent_info) ;
                 P.best_traj_indices = [] ;
+            end
+            
+            % make sure the plan is long enough
+            if T(end) < P.t_move
+                T = [T, P.t_move] ;
+                U = [U, zeros(2,1)] ;
+                Z = [Z, [Z(1:3,end) ; zeros(2,1)]] ;
             end
         end
     end

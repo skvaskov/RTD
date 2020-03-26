@@ -13,7 +13,7 @@ classdef segway_generic_planner < planner
         
         % plan handling
         current_waypoint
-        lookahead_distance = 1.25 ; % meters
+        lookahead_distance = 1.5 ; % meters
         buffer_for_HLP = 0.1 ;
         
         % plotting
@@ -26,8 +26,9 @@ classdef segway_generic_planner < planner
         %% constructor
         function P = segway_generic_planner(varargin)
             name = 'Segway Planner' ;
-            HLP = straight_line_HLP() ;
+            HLP = segway_grid_HLP() ;
             P@planner('name',name,'HLP',HLP,varargin{:}) ;
+            P.HLP.verbose = P.verbose ;
         end
         
         %% setup
@@ -39,6 +40,10 @@ classdef segway_generic_planner < planner
             P.bounds = world_info.bounds + [b -b b -b] ;
             
         % 2. set up high-level planner
+            if isa(P.HLP,'segway_grid_HLP')
+                P.vdisp('Adjusting HLP buffer!',7)
+                P.HLP.buffer = P.buffer ;
+            end
             P.HLP.setup(agent_info,world_info) ;
             P.HLP.default_lookahead_distance = P.lookahead_distance ;
 
@@ -55,43 +60,21 @@ classdef segway_generic_planner < planner
                 'T',[],'U',[],'Z',[]) ;
         end
         
-        %% process obstacles
-        function [O_buf,A_O,b_O,N_obs,N_halfplanes] = process_obstacles(P,world_info)
-            % create buffered obstacles
+        %% process world info (buffer the obstacles)
+        function [world_info,O_str] = process_world_info(P,world_info,buffer_distance)
             O = world_info.obstacles ;
-            O_buf = [] ;
-            A_O = [] ;
-            b_O = [] ;
-            
-            % make sure O does not have a column of nans to start
-            if isnan(O(1,1))
-                O = O(:,2:end) ;
-            end
-            
-            % create buffered obstacles and halfplane representations
-            N_O = size(O,2) ;
-            N_obs = ceil(N_O/6) ;
-            for idx = 1:6:N_O
-                % get obstacle (we know it's a written as 5 points in CCW
-                % order, so we can cheat a bit here)
-                o = O(:,idx:idx+4) ;
-                
-                % create buffered obstacles
-                o_buf = buffer_box_obstacles(o,P.buffer,13) ;
-                O_buf = [O_buf, nan(2,1), o_buf] ;
-                
-                % create halfplane representation for collision checking
-                [A_idx,b_idx] = vert2lcon(o_buf') ;
-                A_O = [A_O ; A_idx] ;
-                b_O = [b_O ; b_idx] ;
-                
-                % get the number of halfplanes (thank goodness this ends up
-                % being exactly the same for every obstacle, saving us a
-                % lot of work)
-                N_halfplanes = length(b_idx) ;
-            end
-            
+            O_str = convert_box_obstacles_to_halfplanes(O,buffer_distance) ;
+            O_buf = O_str.O ;
             P.current_obstacles = O_buf ;
+            world_info.obstacles = O_buf ;
+            world_info.obstacles_struct = O_str ;
+        end
+        
+        %% get waypoint
+        function z_goal = get_waypoint(P,agent_info,world_info)
+            lkhd = (P.agent_average_speed + P.lookahead_distance) / 2 ;
+            z_goal = P.HLP.get_waypoint(agent_info,world_info,lkhd) ;
+            P.current_waypoint = z_goal ;
         end
         
         %% increment plan
@@ -184,14 +167,14 @@ classdef segway_generic_planner < planner
         end
         
         %% update info object
-        function update_info(P,agent_info, waypoint, O, T, U, Z)
+        function update_info(P,agent_info, waypoint, T, U, Z)
             I = P.info ;
             
             I.agent_time = [I.agent_time, agent_info.time(end)] ;
             I.agent_state = [I.agent_state, agent_info.state(:,end)] ;
             I.waypoint = [I.waypoint, waypoint] ;
             I.waypoints = [I.waypoints, {P.HLP.waypoints}] ;
-            I.obstacles = [I.obstacles, {O}] ;
+            I.obstacles = [I.obstacles, {P.current_obstacles}] ;
             I.T = [I.T, {T}] ;
             I.U = [I.U, {U}] ;
             I.Z = [I.Z, {Z}] ;
@@ -265,7 +248,7 @@ classdef segway_generic_planner < planner
             if info_idx_check
                 % plot current obstacles
                 if P.plot_obstacles_flag
-                    O = I.obstacles_in_world_frame{info_idx} ;
+                    O = I.obstacles{info_idx} ;
                     
                     if isempty(O)
                         O = nan(2,1) ;

@@ -1,12 +1,12 @@
 classdef segway_NMPC_planner < segway_generic_planner
-% Class: segway_NMPC_planner < planner
+% Class: segway_NMPC_planner < segway_generic_planner
 %
 % Implements nonlinear model-predictive control (NMPC) as a trajectory
 % planner with GPOPS-II
 %
 % Authors: Shreyas Kousik, Sean Vaskov, and Ram Vasudevan
 % Created: some time in 2018
-% Updated: 21 Mar 2020
+% Updated: 25 Mar 2020
     
     %% properties
     properties
@@ -23,16 +23,8 @@ classdef segway_NMPC_planner < segway_generic_planner
     methods
         %% constructor
         function P = segway_NMPC_planner(varargin)
-            % set default properties
             name = 'Segway NMPC Planner' ;
-            t_move = 0.5 ;
-            t_plan = 10 ;
-            buffer = 0.5 ;
-            HLP = straight_line_HLP() ; % default high level planner
-            
-            % create planner
-            P = parse_args(P,'t_move',t_move,'t_plan',t_plan,...
-                'buffer',buffer,'name',name,'HLP',HLP,varargin{:}) ;
+            P@segway_generic_planner('name',name,varargin{:}) ;
         end
         
         %% setup
@@ -60,14 +52,11 @@ classdef segway_NMPC_planner < segway_generic_planner
                 agent_info.state(agent_info.speed_index,:),...
                 P.agent_average_speed_time_horizon) ;
             
-        % 2. set up obstacles
-            [O_buf,A_O,b_O,N_obs,N_halfplanes] = P.process_obstacles(world_info) ;
+        % 2. set up world info and obstacles
+            [world_info,O_str] = P.process_world_info(world_info,P.buffer) ;
             
         % 3. get waypoint
-            lkhd = (P.agent_average_speed + P.lookahead_distance) / 2 ;
-            world_info.obstacles = O_buf ;
-            z_goal = P.HLP.get_waypoint(agent_info,world_info,lkhd) ;
-            P.current_waypoint = z_goal ;
+            z_goal = P.get_waypoint(agent_info,world_info) ;
             
         % 4. set up GPOPS problem
             try
@@ -88,10 +77,10 @@ classdef segway_NMPC_planner < segway_generic_planner
             P.gpops_problem.bounds.phase.initialstate.lower = z_cur' - P.initial_condition_epsilon(:)' ;
             P.gpops_problem.bounds.phase.initialstate.upper = z_cur' + P.initial_condition_epsilon(:)' ;
             
-            P.gpops_problem.auxdata.obs.A = A_O ;
-            P.gpops_problem.auxdata.obs.b = b_O ;
-            P.gpops_problem.auxdata.obs.N_obs = N_obs ;
-            P.gpops_problem.auxdata.obs.N_halfplanes = N_halfplanes ;
+            P.gpops_problem.auxdata.obs.A = O_str.A ;
+            P.gpops_problem.auxdata.obs.b = O_str.b ;
+            P.gpops_problem.auxdata.obs.N_obs = O_str.N_obs ;
+            P.gpops_problem.auxdata.obs.N_halfplanes = O_str.N_halfplanes ;
             
             % goal
             P.gpops_problem.auxdata.goal_position = z_goal ;
@@ -116,7 +105,7 @@ classdef segway_NMPC_planner < segway_generic_planner
             P.current_plan.T = T ;
             P.current_plan.U = U ;
             P.current_plan.Z = Z ;
-            P.update_info(agent_info,z_goal,O_buf,T,U,Z) ;
+            P.update_info(agent_info,z_goal,T,U,Z) ;
             
         % 8. FOR DEBUGGING, plot the current plan
             % if ~isempty(Z)

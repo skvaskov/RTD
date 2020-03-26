@@ -19,13 +19,13 @@ dt_traj = 0.01 ;
 t_traj = 0.25 ;
 
 % values for validation
-w_0_val = 0 ;
-v_0_val = 0 ;
-w_des_val = -1 ;
-v_des_val = 0.25 ;
+w_0_val = 1 ;
+v_0_val = 1 ;
+w_des_val = 0 ;
+v_des_val = 1.25 ;
 
 % save symbolic traj
-save_flag = true ;
+save_flag = false ;
 data_filename = 'segway_symbolic_traj_data.mat' ;
 traj_filename = 'segway_symbolic_traj.m' ;
 
