@@ -74,27 +74,8 @@ classdef rover_RTD_planner < generic_RTD_planner
             h0 = agent_info.state(agent_info.heading_index,end);
             
             for i = 1:length(P.FRS)
-                if P.FRS{i}.v0_min == 0
-                    v0_min = -1;
-                else
-                    v0_min = P.FRS{i}.v0_min;
-                end
                 
-                if P.FRS{i}.v0_max == 2
-                    v0_max = 3;
-                else
-                    v0_max = P.FRS{i}.v0_max;
-                end
-                
-                if P.FRS{i}.psi0_max == 0
-                    psi0_max = 0;
-                    psi0_min = -Inf;
-                else
-                    psi0_max = Inf;
-                    psi0_min = 0;
-                end
-                
-                if v0 >= v0_min && v0 <= v0_max && h0 >= psi0_min && h0 <= psi0_max
+                if (v0 >= P.FRS{i}.v0_min && v0 <= P.FRS{i}.v0_max) && (h0 >= P.FRS{i}.psi0_min && h0 <= P.FRS{i}.psi0_max)
                     P.current_FRS_index = i;
                     break
                 end
@@ -110,7 +91,6 @@ classdef rover_RTD_planner < generic_RTD_planner
             % evaluating the polynomial online
             w = F.w;
             k = F.k ;
-            y = F.y;
             
             %shift to 0 [0,1];
             w_full = w - 1.0001 ; % this is so (x,k) \in FRS => w(x,k) > 0
@@ -123,7 +103,7 @@ classdef rover_RTD_planner < generic_RTD_planner
      
             w = msubs(w_full,k(2),psiend_k);
             
-            z = [F.x ;y];
+            z = F.z(1:2);
 
             P.w_polynomial_info = decompose_w_polynomial(w,z,k([1,3])) ;
             
@@ -145,10 +125,10 @@ classdef rover_RTD_planner < generic_RTD_planner
                 
                 % move obstacles into FRS coordinates for generating nonlinear
                 % constraints with the w polynomial
-                x0 = F.xoffset(1);
-                y0 = F.xoffset(2);
-                Dx = F.xscale(1);
-                Dy = F.xscale(2);
+                x0 = F.zoffset(1);
+                y0 = F.zoffset(2);
+                Dx = F.zscale(1);
+                Dy = F.zscale(2);
                
                 
                 R = [cos(P.agent_state(3)), -sin(P.agent_state(3)) ;
@@ -262,19 +242,17 @@ classdef rover_RTD_planner < generic_RTD_planner
             diff_v = F.diff_v;
             v0 = P.agent_state(4);
             
-            psi_end_max = 0.5;
-            psi_end_min = -0.5;
             
-            psi_end = -P.agent_state(3);
+            psi_end = bound_values(-P.agent_state(3),F.psi_end_min,F.psi_end_max);
             
             lower_k3 = ((v0-diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
             upper_k3 = ((v0+diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
             
-            upper_psi_end = -w0_des_max/psi_end_min*psi_end+w0_des_max;
-            lower_psi_end = -w0_des_min/psi_end_max*psi_end+w0_des_min;
+            upper_w0_from_psi_end = 1/0.5*psi_end+1;
+            lower_w0_from_psi_end = 1/0.5*psi_end-1;
             
-            upper_k1 = (upper_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
-            lower_k1 = (lower_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
+            upper_k1 = (upper_w0_from_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
+            lower_k1 = (lower_w0_from_psi_end-w0_des_min)*2/(w0_des_max-w0_des_min)-1;
              
             % create the inequality constraints and problem bounds
             P.trajopt_problem.Aineq = [];
@@ -329,25 +307,30 @@ classdef rover_RTD_planner < generic_RTD_planner
             v_des_max = F.v_des_max;
             v_des_min = F.v_des_min;
             
-            psi_end = bound_values(-P.agent_state(3),-0.5,0.5);
             
-            pose0 = P.agent_state([agent_info.position_indices,agent_info.heading_index]);
-      
+            
+            pose0 = P.agent_state([agent_info.position_indices,wrapToPi(agent_info.heading_index)]);
+            
+            psi_end = bound_values(-pose0(3),-0.5,0.5);
             % get the desired speed and yaw rate
             w0_des = (w0_des_max-w0_des_min)/2*(k_opt(1)+1)+w0_des_min;
             v_des = (v_des_max-v_des_min)/2*(k_opt(2)+1)+v_des_min;
 
             % create the desired trajectory
             t_stop =  2;
-            [T_out,U_out,Z_out] = make_rover_braking_trajectory(P.t_move,F.t_f,...
-                                    t_stop,w0_des,psi_end,v_des) ;
+             [T_out,U_out,Z_out] = make_rover_braking_trajectory(P.t_move,F.t_f,...
+                                     t_stop,w0_des,psi_end,v_des) ;
+            
+%             [T_out,U_out,Z_out] =  make_rover_desired_trajectory(F.t_f,w0_des,psi_end,v_des);
             
             %rotate and place at current position/heading
-            Z_out(1:2,:) = rotation_matrix_2D(pose0(3))*Z_out(1:2,:)+pose0(1:2);
-            Z_out(3,:) =   wrapToPi(Z_out(3,:)+pose0(3));
+%             Z_out(1:2,:) = rotation_matrix_2D(pose0(3))*Z_out(1:2,:)+pose0(1:2);
+%             Z_out(3,:) =   wrapToPi(Z_out(3,:)+pose0(3));
             
             %update current plan 
-            P.current_plan = Z_out(1:2,:);
+            
+            [~,~,Zp] =  make_rover_desired_trajectory(F.t_f,w0_des,psi_end,v_des);
+            P.current_plan = rotation_matrix_2D(pose0(3))*Zp(1:2,:)+pose0(1:2);
            
         end
 
@@ -370,7 +353,7 @@ classdef rover_RTD_planner < generic_RTD_planner
                     
                     F = P.FRS{P.latest_plan.current_FRS_index};
                     k = F.k;
-                    y = F.y;
+                    z = F.z(1:2);
                     
                     pose0 = P.latest_plan.agent_state(1:3);
                     
@@ -380,7 +363,7 @@ classdef rover_RTD_planner < generic_RTD_planner
                     
                     wx = subs(F.w,k,[k_opt(1);psiend_k2;k_opt(2)]);
                     
-                    h = get_2D_msspoly_contour(wx,[F.x;y],1,'Scale',F.xscale,'Offset',-F.xoffset,'pose',pose0);
+                    h = get_2D_msspoly_contour(wx,z,1,'Scale',F.zscale(1:2),'Offset',-F.zoffset(1:2),'pose',pose0);
                     
                     
                     if ~check_if_plot_is_available(P,'FRS_contour')

@@ -19,10 +19,10 @@ bound_space = 0.6;
 
 % planner
 buffer = 0.1 ; % m
-t_plan = 1; % if t_plan = t_move, then real time planning is enforced
+t_plan = 0.5; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
-lookahead_distance = 8;
-FRS_directory = '/Users/seanvaskov/MATLAB/IJRR_bridging_the_gap/step_3_FRS_computation/data/simulation_mirror';
+lookahead_distance = 4;
+FRS_directory = '/Users/seanvaskov/MATLAB/IJRR_bridging_the_gap/step_3_FRS_computation/data/rover_sim_fri';
 
 plot_FRS_flag = true ;
 plot_HLP_flag = false ;
@@ -32,14 +32,15 @@ verbose_level = 5 ;
 max_sim_time = 1000 ;
 max_sim_iterations = 1000;
 %% automated from here
-A = RoverAWD();
+RoverLLC = rover_PD_LLC('yaw_gain',5,'yaw_rate_gain',0.5);
+A = RoverAWD('LLC',RoverLLC,'max_speed',3) ;
 
 W = two_lane_road_static('N_obstacles',N_obstacles,'bound_space',bound_space,...
                      'verbose',verbose_level, 'obstacle_size_bounds',obstacle_size_bounds,...
                      'lane_width',lane_width,'road_length',road_length,...
                      'obstacle_long_spacing',obstacle_long_spacing,'obstacle_lat_spacing',obstacle_lat_spacing) ;
 
-P = rover_RTD_mirror('FRS_directory',FRS_directory,'verbose',verbose_level,'buffer',buffer,...
+P = rover_RTD_planner('FRS_directory',FRS_directory,'verbose',verbose_level,'buffer',buffer,...
                                  't_plan',t_plan,'t_move',t_move,...
                                  'plot_FRS_flag',plot_FRS_flag,...
                                  'plot_HLP_flag',plot_HLP_flag','HLP',lane_HLP,'lookahead_distance',lookahead_distance) ;
