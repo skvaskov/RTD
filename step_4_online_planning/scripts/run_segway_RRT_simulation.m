@@ -1,9 +1,9 @@
 %% description
 % This script runs a simulation with the segway in the simulator
-% framework, using NMPC to plan online.
+% framework, using RRT to plan online.
 %
 % Author: Shreyas Kousik
-% Created: 21 Mar 2020
+% Created: 24 Mar 2020
 % Updated: 25 Mar 2020
 %
 %% user parameters
@@ -14,8 +14,8 @@ bounds = [-4,5,-2.5,2.5] ;
 goal_radius = 0.5 ;
 
 % planner
-additional_buffer = 0.1 ; % m (this is added to the agent footprint)
-t_plan = 10 ; % if t_plan = t_move, then real time planning is enforced
+additional_buffer = 0.05 ; % m (this is added to the agent footprint)
+t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
 plot_HLP_flag = true ;
 plot_waypoints_flag = true ;
@@ -32,9 +32,9 @@ animate_after_simulating_flag = false ;
 %% automated from here
 A = segway_agent() ;
 
-buffer = A.footprint + additional_buffer ; 
+buffer = A.footprint + additional_buffer ;
 
-P = segway_NMPC_planner('verbose',verbose_level,'buffer',buffer,...
+P = segway_RRT_planner('verbose',verbose_level,'buffer',buffer,...
     't_plan',t_plan,'t_move',t_move,...
     'plot_HLP_flag',plot_HLP_flag,...
     'plot_waypoints_flag',plot_waypoints_flag) ;
