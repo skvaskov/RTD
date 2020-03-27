@@ -21,35 +21,41 @@ function varargout = convert_box_obstacles_to_halfplanes(O,b)
     b_O = [] ;
 
     % make sure O does not have a column of nans to start
-    if isnan(O(1,1))
-        O = O(:,2:end) ;
-    end
-
-    % create buffered obstacles and halfplane representations
-    N_O = size(O,2) ;
-    N_obs = ceil(N_O/6) ;
-    for idx = 1:6:N_O
-        % get obstacle (we know it's a written as 5 points in CCW
-        % order, so we can cheat a bit here)
-        o = O(:,idx:idx+4) ;
-
-        % create buffered obstacles
-        if b > 0
-            o_buf = buffer_box_obstacles(o,b,13) ;
-        else
-            o_buf = o ;
+    if ~isempty(O)
+        if isnan(O(1,1))
+            O = O(:,2:end) ;
         end
-        O_buf = [O_buf, nan(2,1), o_buf] ;
-
-        % create halfplane representation for collision checking
-        [A_idx,b_idx] = vert2lcon(o_buf') ;
-        A_O = [A_O ; A_idx] ;
-        b_O = [b_O ; b_idx] ;
-
-        % get the number of halfplanes (thank goodness this ends up
-        % being exactly the same for every obstacle, saving us a
-        % lot of work)
-        N_halfplanes = length(b_idx) ;
+        
+        % create buffered obstacles and halfplane representations
+        N_O = size(O,2) ;
+        N_obs = ceil(N_O/6) ;
+        
+        for idx = 1:6:N_O
+            % get obstacle (we know it's a written as 5 points in CCW
+            % order, so we can cheat a bit here)
+            o = O(:,idx:idx+4) ;
+            
+            % create buffered obstacles
+            if b > 0
+                o_buf = buffer_box_obstacles(o,b,13) ;
+            else
+                o_buf = o ;
+            end
+            O_buf = [O_buf, nan(2,1), o_buf] ;
+            
+            % create halfplane representation for collision checking
+            [A_idx,b_idx] = vert2lcon(o_buf') ;
+            A_O = [A_O ; A_idx] ;
+            b_O = [b_O ; b_idx] ;
+            
+            % get the number of halfplanes (thank goodness this ends up
+            % being exactly the same for every obstacle, saving us a
+            % lot of work)
+            N_halfplanes = length(b_idx) ;
+        end
+    else
+        N_obs = 0 ;
+        N_halfplanes = 0 ;
     end
     
     if nargout == 1
