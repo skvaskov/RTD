@@ -1,3 +1,4 @@
+function experiment_1_segway(world_start_index,world_end_index)
 %% description
 % This script runs RRT and NMPC planners with different buffer sizes on
 % randomly-generated worlds, to determine which buffer size is best
@@ -10,13 +11,14 @@
 % Updated: 25 Mar 2020
 %
 %% user parameters
-% worlds
-world_start_index = 1 ;
-world_end_index = 500 ;
+
+% agent
+sensor_radius = 4 ;
 
 % planner
 additional_buffers = [0.0, 0.05, 0.10] ; % m (this is added to the agent footprint)
-t_plan = 10 ; % if t_plan = t_move, then real time planning is enforced
+t_plan_RRT = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+t_plan_NMPC = 10 ; 
 t_move = 0.5 ;
 plot_HLP_flag = true ;
 plot_waypoints_flag = true ;
@@ -24,8 +26,8 @@ plot_waypoints_flag = true ;
 % simulation
 run_RRT_planner_flag = true ;
 run_NMPC_planner_flag = true ;
-verbose_level = 2 ;
-max_sim_time = 50 ;
+verbose_level = 4 ;
+max_sim_time = 300 ;
 max_sim_iterations = 100 ;
 plot_while_running = false ;
 
@@ -35,7 +37,7 @@ summary_filename_header = 'segway_experiment_1_summary' ;
 
 %% automated from here
 % create agent
-A = segway_agent() ;
+A = segway_agent('sensor_radius',sensor_radius) ;
 
 % create planners
 P = {} ;
@@ -46,7 +48,7 @@ for additional_buffer = additional_buffers
     
     if run_RRT_planner_flag
         P{p_idx} = segway_RRT_planner('verbose',verbose_level,'buffer',buffer,...
-            't_plan',t_plan,'t_move',t_move,...
+            't_plan',t_plan_RRT,'t_move',t_move,...
             'plot_HLP_flag',plot_HLP_flag,...
             'plot_waypoints_flag',plot_waypoints_flag) ;
         
@@ -55,7 +57,7 @@ for additional_buffer = additional_buffers
     
     if run_NMPC_planner_flag
         P{p_idx} = segway_NMPC_planner('verbose',verbose_level,'buffer',buffer,...
-            't_plan',t_plan,'t_move',t_move,...
+            't_plan',t_plan_NMPC,'t_move',t_move,...
             'plot_HLP_flag',plot_HLP_flag,...
             'plot_waypoints_flag',plot_waypoints_flag) ;
         
@@ -89,4 +91,5 @@ for w_idx = world_start_index:world_end_index
             '_world_',num2str(w_idx,'%04d'),'.mat'] ;
         save(summary_save_filename, 'summary')
     end
+end
 end

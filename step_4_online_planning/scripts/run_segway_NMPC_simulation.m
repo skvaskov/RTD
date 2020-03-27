@@ -26,7 +26,7 @@ max_sim_time = 1000 ;
 max_sim_iterations = 1000 ;
 
 % plotting
-plot_while_simulating_flag = true ;
+plot_while_simulating_flag = false ; 
 animate_after_simulating_flag = false ;
 
 %% automated from here
