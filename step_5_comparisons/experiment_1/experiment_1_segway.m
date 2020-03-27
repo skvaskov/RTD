@@ -21,7 +21,7 @@ function experiment_1_segway(world_start_index,world_end_index,...
 
     % planner
     additional_buffers = [0.0, 0.05, 0.10, 0.15] ; % m (this is added to the agent footprint)
-    t_plan_RRT = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+    t_plan_RRT = 10 ; % if t_plan = t_move, then real time planning is enforced
     t_plan_NMPC = 10 ;
     t_move = 0.5 ;
     plot_HLP_flag = true ;
