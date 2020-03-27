@@ -14,7 +14,7 @@
 %
 %% automated from here
 % load each summary file and get the number of goals and collisions
-summary_save_filename_header = 'segway_RRT_experiment_1_summary' ;
+summary_save_filename_header = 'segway_experiment_1_summary' ;
 f = dir(pwd) ;
 
 goal = [] ;
@@ -42,7 +42,9 @@ toc
 
 % sanity check
 if isempty(goal)
-    error('Please navigate to the directory where the experiment data is!')
+    error(['Please navigate to the directory where the experiment data is, ',...
+        'and make the variable sure summary_save_filename_header is named ',...
+        'to match your data .mat files.'])
 end
 
 %% get total number of goals and collisions
