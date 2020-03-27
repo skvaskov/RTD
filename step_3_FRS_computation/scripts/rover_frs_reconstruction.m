@@ -9,11 +9,11 @@
 clear ; clc ; close all ;
 %% user parameters
 % degree of SOS polynomial solution
-degree_reconstruction = 6; %this is the degree of the final (w) reachset
+degree_reconstruction = 8; %this is the degree of the final (w) reachset
 
 % load the error functions and distance scales
-load('rover_FRS_xy_scaling_T1.5_v0_1.0_to_2.0_24-Mar-2020.mat')
-load('rover_FRS_xy_T1.5_deg6_v0_1.0_to_2.0_24-Mar-2020.mat')
+load('rover_FRS_xy_scaling_T1.2_v0_0.0_to_0.8_delta0_-0.05_to_0.05.mat')
+load('rover_FRS_xy_T1.25_deg8_v0_0.0_to_0.8_delta0_-0.05_to_0.05_27-Mar-2020.mat')
   
 % whether or not to save output
 save_result = true;
@@ -67,14 +67,14 @@ w = sol.eval(w);
 %% save result
 if save_result
     % create the filename for saving
-    filename = ['rover_reconstructed_deg',num2str(degree_reconstruction),'_frsdeg',num2str(degree),'_T',num2str(T),'_v0_',...
-                num2str(v0_min,'%0.1f'),'_to_',...
-                num2str(v0_max,'%0.1f'),'.mat'] ;
+    filename = ['rover_reconstructed_deg',num2str(degree_reconstruction),'_frsdeg',num2str(degree),'_T',num2str(T),...
+        '_v0_', num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),...
+        '_delta0_',num2str(delta0_min,'%0.2f'),'_to_',num2str(delta0_max,'%0.2f'),'.mat'] ;
 
     % save output
     disp(['Saving FRS output to file: ',filename])
     save(filename,'FRS_polynomial*','FRS_lyapunov_function*','w','t','z','k',...
-        'f','g','t_f','T','degree','diff*','degree_reconstruction','solver_input_problem','*_max','*_min','*scale','*offset')
+        'f','g','t_f','T','degree','degree_reconstruction','solver_input_problem','*_max','*_min','*scale','*offset')
 end
 
 

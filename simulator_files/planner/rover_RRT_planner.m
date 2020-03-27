@@ -10,7 +10,7 @@ classdef rover_RRT_planner < planner
         node_min=4 % RRT node
 
 
-        max_dist=10 %maximum length of trajectories
+        max_distance=10 %maximum length of trajectories
         T_min=1.5 % lower bound on timing, can be used to encourage safety
         T_max=3% upper bound on timing, encourages robot to go faster
         plot_current_nodes % plots the current tree if available
@@ -44,9 +44,10 @@ classdef rover_RRT_planner < planner
         
         current_waypoint
         
-        control_weights = [0 2]' ;
-        y_weight = 1;
-        x_weight = 1;
+        speed_weight
+        steering_weight
+        lateral_weight
+        longitudinal_weight
    
     end
     
@@ -99,7 +100,7 @@ classdef rover_RRT_planner < planner
         L = [min([L(1),rotated_vertices(1,:)]),max([L(2),rotated_vertices(1,:)])];
         W = [min([W(1),rotated_vertices(2,:)]),max([W(2),rotated_vertices(2,:)])];
         
-        P.obstacle_buffer = P.buffer+[L;W];
+        P.obstacle_buffer = P.buffer*[-1,1;-1,1]+[L;W];
         
         
         % reset trajectory and tree
@@ -332,12 +333,12 @@ classdef rover_RRT_planner < planner
             node_dist_thr = dist_point_to_points(Z_new_thr(1:2,end),P.agent_state(agent_info.position_indices)) ;
             node_dist_brk = dist_point_to_points(Z_new_brk(1:2,end),P.agent_state(agent_info.position_indices)) ;
             
-            if node_dist_thr>P.max_dist
+            if node_dist_thr>P.max_distance
                 reached_dist=true;
             end
             
-            traj_feasible_thr = traj_feasible_thr && (node_dist_thr <= P.max_dist) ;
-            traj_feasible_brk = traj_feasible_brk && (node_dist_brk <= P.max_dist) ;
+            traj_feasible_thr = traj_feasible_thr && (node_dist_thr <= P.max_distance) ;
+            traj_feasible_brk = traj_feasible_brk && (node_dist_brk <= P.max_distance) ;
             
         %% update throttle and braking trees with new node
             % hardcoded weights on control inputs for now
@@ -354,12 +355,12 @@ classdef rover_RRT_planner < planner
                 dist_to_wp_x = (x_new_thr-wp(1))^2;
                 dist_to_wp_y = (y_new_thr-wp(2))^2;
                 
-                Cnode_thr = 1/min_dist_to_obs ;
+                Cnode_thr = 1/min_dist_to_obs +  P.longitudinal_weight*dist_to_wp_x;
                
                 
                 % track control input
                 
-                Ccum_thr = P.T_edge*(P.control_weights'*((Uin_thr-[P.desired_speed;0]).^2) + P.y_weight*dist_to_wp_y + P.x_weight*dist_to_wp_x) + Ccum_near_thr  ;
+                Ccum_thr = P.T_edge*(P.speed_weight*(Uin_thr(1)-P.desired_speed)^2+ P.steering_weight*Uin_thr(2)^2 + P.lateral_weight*(dist_to_wp_y)^2) + Ccum_near_thr  ;
                 
                 % add new node to tree
                 t_new = t_near_thr + P.T_edge ;

@@ -1,6 +1,8 @@
 classdef rover_RTD_planner < generic_RTD_planner
     properties
+        
         point_spacing
+        
         arc_point_spacing
         
         w_polynomial_info
@@ -72,10 +74,13 @@ classdef rover_RTD_planner < generic_RTD_planner
             P.current_FRS_index = NaN;
             v0 = agent_info.state(agent_info.velocity_index,end);
             h0 = agent_info.state(agent_info.heading_index,end);
+            delta0 = agent_info.state(5,end);
             
             for i = 1:length(P.FRS)
                 
-                if (v0 >= P.FRS{i}.v0_min && v0 <= P.FRS{i}.v0_max) && (h0 >= P.FRS{i}.psi0_min && h0 <= P.FRS{i}.psi0_max)
+                if (v0 >= max(0,P.FRS{i}.v0_min) && v0 <= P.FRS{i}.v0_max)...
+                        && (h0 >= P.FRS{i}.psi0_min && h0 <= P.FRS{i}.psi0_max) ...
+                        && (delta0 >= P.FRS{i}.delta0_min && delta0 <= P.FRS{i}.delta0_max)
                     P.current_FRS_index = i;
                     break
                 end
@@ -237,16 +242,16 @@ classdef rover_RTD_planner < generic_RTD_planner
             w0_des_max  = F.w0_des_max;
             w0_des_min =  F.w0_des_min;
             
-            v_des_max = F.v_des_max;
-            v_des_min = F.v_des_min;
-            diff_v = F.diff_v;
-            v0 = P.agent_state(4);
+%             v_des_max = F.v_des_max;
+%             v_des_min = F.v_des_min;
+%             diff_v = F.diff_v;
+%             v0 = P.agent_state(4);
             
             
             psi_end = bound_values(-P.agent_state(3),F.psi_end_min,F.psi_end_max);
             
-            lower_k3 = ((v0-diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
-            upper_k3 = ((v0+diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
+%             lower_k3 = ((v0-diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
+%             upper_k3 = ((v0+diff_v)-v_des_min)*2/(v_des_max-v_des_min)-1;
             
             upper_w0_from_psi_end = 1/0.5*psi_end+1;
             lower_w0_from_psi_end = 1/0.5*psi_end-1;
@@ -260,7 +265,7 @@ classdef rover_RTD_planner < generic_RTD_planner
             P.trajopt_problem.bineq = [] ;
 
             P.trajopt_problem.k_bounds = [max([lower_k1,-1],[],'omitnan'),min([upper_k1,1],[],'omitnan');...
-                    max([lower_k3,-1]),min([upper_k3,1]) ];
+                   -1,1 ];
          
             
         end

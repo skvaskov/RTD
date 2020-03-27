@@ -131,5 +131,5 @@ if save_result
     % save output
     disp(['Saving FRS output to file: ',filename])
     save(filename,'FRS_polynomial*','FRS_lyapunov_function*','t_f','t','z','k',...
-       'T', 'f','g','*max','degree','solver_input_problem')
+       'T', 'f','g','degree','solver_input_problem')
 end

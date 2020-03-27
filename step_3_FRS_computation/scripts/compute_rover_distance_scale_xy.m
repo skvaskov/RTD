@@ -68,6 +68,6 @@ scaling_filename = ['rover_FRS_xy_scaling_T',num2str(T,'%0.1f'),...
     '_v0_',num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),...
     '_delta0_',num2str(delta0_min,'%0.2f'),'_to_',num2str(delta0_max,'%0.2f'),'.mat'] ;
 
-save(scaling_filename,'zscale','zoffset','T','*_min','*_max') ;
+save(scaling_filename,'zscale','zoffset','T','t_f','*_min','*_max') ;
 
 end

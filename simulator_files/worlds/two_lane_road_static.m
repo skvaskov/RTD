@@ -5,6 +5,8 @@ classdef two_lane_road_static < static_box_world
        road_lower_boundary
        obstacle_lat_spacing = [-1;1] %[min; max] distance from lane center
        obstacle_long_spacing  = [40;80] %[min; max] obstacle distance from eachother
+       obstacle_long_spacing_mean = []
+       obstacle_long_spacing_std_dev = []
        lane_width = 4;
        road_length = 250;
        merge_zone = [NaN,NaN]
@@ -77,8 +79,6 @@ function setup(W)
     N_obs = W.N_obstacles ;
     
     mean_long_spacing=mean(W.obstacle_long_spacing);
-    diff_long_spacing=abs((W.obstacle_long_spacing(2)-W.obstacle_long_spacing(1)));
-
     
     lastlong= 0 + mean_long_spacing;
     
@@ -86,22 +86,22 @@ function setup(W)
 
     
     
-    if W.start(2)>0
-        j=1;
-    else
-        j=0;
-    end
+    j = 1;
     
     for idx = 1:6:(6*N_obs-1)
         
-        %obstacle center in X
-        spacing=min(W.obstacle_long_spacing)+diff_long_spacing*rand;
-
+        %get random obstacle spacing
+        if ~isempty(W.obstacle_long_spacing_mean) && ~isempty(W.obstacle_long_spacing_std_dev)
+            spacing= randRange(W.obstacle_long_spacing(1),W.obstacle_long_spacing(2),W.obstacle_long_spacing_mean,W.obstacle_long_spacing_std_dev);
+        else
+            spacing= randRange(W.obstacle_long_spacing(1),W.obstacle_long_spacing(2));
+        end
+        
         cx=lastlong+spacing;
         
         
         % obstacle rotation
-        r= abs(wrapToPi(diff(W.obstacle_rotation_bounds)))*rand;
+        r= randRange(W.obstacle_rotation_bounds(1),W.obstacle_rotation_bounds(2));
         R = [cos(r) sin(r) ; -sin(r) cos(r)] ;
         
         obstacle_size = (W.obstacle_size_bounds(:,2)-W.obstacle_size_bounds(:,1)).*rand(2,1)+W.obstacle_size_bounds(:,1);
@@ -175,9 +175,12 @@ function reset(W)
 
     W.current_time = 0 ;
     
-    mult = randi(2)-3;
+    mult = randi(2);
+    if mult == 2
+        mult = -1;
+    end
     
-    W.start = [0;1^mult*W.lane_width/2;0];
+    W.start = [0;(-1)^mult*W.lane_width/2;0];
     W.goal = [W.road_length;W.start(2)];
     
 end
