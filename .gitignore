@@ -1,2 +1,8 @@
 *.DS_Store
 step_5_comparisons/experiment_1/segway_data/*summary*.mat
+step_5_comparisons/experiment_2/segway_data/*summary*.mat
+step_5_comparisons/experiment_3/segway_data/*summary*.mat
+step_5_comparisons/experiment_1/rover_data/*summary*.mat
+step_5_comparisons/experiment_2/rover_data/*summary*.mat
+step_5_comparisons/experiment_3/rover_data/*summary*.mat
+

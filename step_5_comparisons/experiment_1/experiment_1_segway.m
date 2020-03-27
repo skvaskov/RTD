@@ -4,11 +4,11 @@ function experiment_1_segway(world_start_index,world_end_index)
 % randomly-generated worlds, to determine which buffer size is best
 %
 % NOTE, to run this script, you should be in the following directory:
-%   IJRR_bridging_the_gap/step_5_comparisons/experiment_1/segway_data
+%   IJRR_bridging_the_gap/step_5_comparisons/experiment_1/segway_data/
 %
 % Author: Shreyas Kousik
 % Created: 24 Mar 2020
-% Updated: 25 Mar 2020
+% Updated: 27 Mar 2020
 %
 %% user parameters
 
