@@ -1,30 +1,35 @@
-%% description
-% This script inspects the results of experiment 1 for the RRT planner, to
-% determine what an appropriate buffer size is to balance between safety
-% and performance (i.e., not crashing, vs. reaching the goal)
+function varargout = inspect_experiment_results(directory)
+% inspect_experiment_results()
+% inspect_experiment_results(directory)
+% [goals, collisions, planners] = inspect_experiment_results(directory)
 %
-% This takes about 5 seconds to load the data from 500 files
-%
-% NOTE, to run this script, you should be in the following directory:
-%   IJRR_bridging_the_gap/step_5_comparisons/experiment_1/segway_data
+% This function loads all of the experiment results .mat files in a given
+% directory and compiles the number of goals reached and number of
+% collisions experienced by each planner. If no directory is provided, it
+% attempts to load everything from the present working directory.
 %
 % Author: Shreyas Kousik
 % Created: 25 Mar 2020
-% Updated: -
-%
-%% automated from here
+% Updated: 27 Mar 2020
+
+if nargin < 1
+    f = dir(pwd) ;
+else
+    f = dir(directory) ;
+end
+
 % load each summary file and get the number of goals and collisions
-summary_save_filename_header = 'segway_experiment_1_summary' ;
-f = dir(pwd) ;
+N_files = length(f) ;
+N_report = floor(N_files/10) ;
 
 goal = [] ;
 collision = [] ;
 
 disp('Loading data')
 tic
-for idx = 1:length(f)
+for idx = 1:N_files
     n = f(idx).name ;
-    if startsWith(n,summary_save_filename_header)
+    if contains(n,'summary')
         load(f(idx).name)
         
         goal_temp = [] ;
@@ -37,24 +42,34 @@ for idx = 1:length(f)
         goal = [goal, goal_temp] ;
         collision = [collision, collision_temp] ;
     end
+    
+    % report loading file progress
+    if mod(idx,N_report) == 0
+        disp([num2str(100*idx/N_files,'%0.0f'),' % complete'])
+    end
 end
 toc
 
 % sanity check
 if isempty(goal)
-    error(['Please navigate to the directory where the experiment data is, ',...
-        'and make the variable sure summary_save_filename_header is named ',...
-        'to match your data .mat files.'])
+    error('Please navigate to a directory containing experiment data!')
 end
 
-%% get total number of goals and collisions
+% get total number of goals and collisions
 goal_result = sum(goal,2) ;
 collision_result = sum(collision,2) ;
 N_worlds_str = num2str(size(goal,2)) ;
 
+% get planner names
+planner_names = {} ;
+for p_idx = 1:length(summary)
+    planner_names{p_idx} = summary(p_idx).planner_name ;
+end
+
+% display results
 disp(' ')
 disp('--------------------------------------------------------------------')
-disp('EXPERIMENT 1 RESULTS')
+disp('RESULTS')
 disp(' ')
 disp(['Number of worlds: ',N_worlds_str])
 disp(['Number of planners: ',num2str(length(summary))])
@@ -70,3 +85,7 @@ for p_idx = 1:length(summary)
 end
 disp('--------------------------------------------------------------------')
 disp(' ')
+
+% set output args
+varargout = {goal_result, collision_result, planner_names} ;
+varargout = varargout(1:nargout) ;
