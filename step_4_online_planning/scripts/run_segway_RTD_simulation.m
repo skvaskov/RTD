@@ -4,7 +4,7 @@
 %
 % Author: Shreyas Kousik
 % Created: 13 Mar 2020
-% Updated: 20 Mar 2020
+% Updated: 27 Mar 2020
 %
 %% user parameters
 % world
@@ -17,7 +17,7 @@ goal_radius = 0.5 ;
 buffer = 0.001 ; % m
 t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
-FRS_degree = 10 ;
+FRS_degree = 12 ;
 plot_FRS_flag = true ;
 plot_HLP_flag = true ;
 plot_waypoints_flag = true ;

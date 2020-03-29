@@ -7,7 +7,7 @@ classdef segway_RRT_planner < segway_generic_planner
 %
 % Author: Shreyas Kousik
 % Created: 2018
-% Updated: 23 March 2020
+% Updated: 26 March 2020
     
     %% properties
     properties

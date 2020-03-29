@@ -508,22 +508,20 @@ classdef segway_RTD_planner < segway_generic_planner
             
             hold_switch(hold_check) ;
         end
-    end
     
     %% utility methods
-    methods (Static)
-        function v_0_range = get_v_0_range_from_v_0(v_0,v_0_min,v_0_max)
+        function v_0_range = get_v_0_range_from_v_0(P,v_0,v_0_min,v_0_max)
             % v_0_range = get_v_0_range_from_v_0(v_0)
             % v_0_range = get_v_0_range_from_v_0(v_0,v_0_min,v_0_max)
             %
             % Given a value of v_0, return the v_0 range that contains v_0 (and
             % corresponds to a particular FRS for the turtlebot)
             
-            if nargin < 2
+            if nargin < 3
                 v_0_min = [0.0 0.5 1.0] ;
             end
             
-            if nargin < 3
+            if nargin < 4
                 v_0_max = [0.5 1.0 1.5] ;
             end
             
@@ -537,7 +535,7 @@ classdef segway_RTD_planner < segway_generic_planner
             v_0_range(2) = v_0_max(idx) ;
         end
         
-        function FRS = get_FRS_from_v_0(v_0,degree)
+        function FRS = get_FRS_from_v_0(P,v_0,degree)
             % FRS = get_FRS_from_v_0(v_0)
             %
             % Load the fastest feasible FRS for the given initial speed v_0
@@ -546,7 +544,7 @@ classdef segway_RTD_planner < segway_generic_planner
                 degree = 10 ;
             end
             
-            v_0_range = get_v_0_range_from_v_0(v_0) ;
+            v_0_range = P.get_v_0_range_from_v_0(v_0) ;
             
             switch v_0_range(1)
                 case 0.0
@@ -559,7 +557,9 @@ classdef segway_RTD_planner < segway_generic_planner
                     error('Please pick a valid speed range!')
             end
         end
-        
+    end
+
+    methods (Static)
         function [r,a] = compute_point_spacings(R,b)
             % [r,a] = compute_point_spacings(R,b)
             %

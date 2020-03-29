@@ -25,9 +25,15 @@ function out = check_points_in_halfplane_obstacles(P,varargin)
         N_hfp = varargin{4} ;
     end
 
-    P_chk = A_obs*P - b_obs ;
-    P_chk = reshape(P_chk,N_hfp,[]) ;
-    P_chk = reshape(max(P_chk,[],1),N_obs,[]) ;
-    out_dbl = -min(P_chk,[],1) ;
-    out = (out_dbl) >= 0 ;
+    if isempty(A_obs)
+        % no obstacles, no problem!
+        out = false(1,length(P)) ;
+    else
+        % yes obstacles, maybe problem?
+        P_chk = A_obs*P - b_obs ;
+        P_chk = reshape(P_chk,N_hfp,[]) ;
+        P_chk = reshape(max(P_chk,[],1),N_obs,[]) ;
+        out_dbl = -min(P_chk,[],1) ;
+        out = (out_dbl) >= 0 ;
+    end
 end
