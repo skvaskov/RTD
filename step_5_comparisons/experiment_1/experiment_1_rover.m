@@ -17,7 +17,7 @@ world_end_index = 1000 ;
 
 % planner
 additional_buffers = [0 0.05 0.10]; % m
-t_plan = 10 ; % if t_plan = t_move, then real time planning is enforced
+t_plan = 2 ; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
 T_min = 1.5; %enough time to plan braking trajectory from 2 m/s
 T_max = 5;
@@ -37,8 +37,8 @@ run ~/MATLAB/GPOPS-II/gpopsMatlabPathSetup.m
 run_RRT_planner_flag = true ;
 run_NMPC_planner_flag = true ;
 verbose_level = 2 ;
-max_sim_time = 50 ;
-max_sim_iterations = 100 ;
+max_sim_iterations = 120 ;
+max_sim_time = t_plan*max_sim_iterations*1.25 ;
 plot_while_running = false ;
 
 % file i/o
@@ -96,7 +96,7 @@ for w_idx = world_start_index:world_end_index
     
     % run the simulator
     summary = S.run() ;
-    
+
     % save the summary
     if save_flag
         summary_save_filename = [summary_filename_header,...

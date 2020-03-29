@@ -10,6 +10,8 @@ classdef rover_RTD_planner < generic_RTD_planner
         current_obstacles_in_FRS_coords
         
         bounds_as_obstacle
+        
+        filtering_poly
     end
     methods
         %% constructor and setup
@@ -118,7 +120,8 @@ classdef rover_RTD_planner < generic_RTD_planner
             
             % extract obstacles
             O = world_info.obstacles ;
-            
+            % save buffered, discretized obstacles
+            P.current_obstacles = O ;   
            
             % buffer and discretize the obstacles
             if ~isempty(O)
@@ -144,12 +147,10 @@ classdef rover_RTD_planner < generic_RTD_planner
                 %get rid of obstacles that are unreachable because they lie
                 %outside of a polygon that contains the reachable set for
                 %all trajecotry parameters
-                reachable_set_poly = [-0.3, 0.2,   1.75,  3.5,  3.5 ,  1.75, 0.2,-0.3,-0.3;...
-                      -0.2,-0.3,-1.5,-1.5,1.5  1.5,0.3,0.2,-0.2];
-                  
-                L = inpolygon(O_center(1,:)',O_center(2,:)',reachable_set_poly(1,:),reachable_set_poly(2,:)');
-                O_center = O_center(:,L);
-                
+                if ~isempty(P.filtering_poly)
+                    L = inpolygon(O_center(1,:)',O_center(2,:)',P.filtering_poly(1,:),P.filtering_poly(2,:)');
+                    O_center = O_center(:,L);
+                end
                 O_FRS = (O_center+[x0;y0])./[Dx;Dy];
 
 
@@ -161,10 +162,7 @@ classdef rover_RTD_planner < generic_RTD_planner
 %                 O_mirrored_FRS = crop_points_outside_region(0,0,O_mirrored_FRS,0.9);
             else
                 O_FRS = [] ;
-            end
-            
-            % save buffered, discretized obstacles
-            P.current_obstacles = O ;       
+            end    
             
             % save the processed obstacles
             P.current_obstacles_in_FRS_coords = O_FRS ;

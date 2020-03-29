@@ -6,7 +6,7 @@
 % This takes about 5 seconds to load the data from 500 files
 %
 % NOTE, to run this script, you should be in the following directory:
-%   IJRR_bridging_the_gap/step_5_comparisons/experiment_1/segway_data
+%   IJRR_bridging_the_gap/step_5_comparisons/experiment_2/rover_data
 %
 % Author: Sean Vaskov
 % Created: 25 Mar 2020
@@ -14,7 +14,7 @@
 %
 %% automated from here
 % load each summary file and get the number of goals and collisions
-summary_save_filename_header = 'rover_experiment_1_summary' ;
+summary_save_filename_header = 'rover_experiment_2_summary' ;
 f = dir(pwd) ;
 
 goal = [] ;
@@ -52,7 +52,7 @@ N_worlds_str = num2str(size(goal,2)) ;
 
 disp(' ')
 disp('--------------------------------------------------------------------')
-disp('EXPERIMENT 1 RESULTS')
+disp('EXPERIMENT 2 RESULTS')
 disp(' ')
 disp(['Number of worlds: ',N_worlds_str])
 disp(['Number of planners: ',num2str(length(summary))])

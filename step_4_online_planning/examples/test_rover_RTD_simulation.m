@@ -19,7 +19,7 @@ lane_width =  0.6;
 bound_space = 0.4;
 
 % planner
-buffer = 0.1 ; % m
+buffer = 0.01 ; % m
 t_plan = 0.5; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
 lookahead_distance = 4;

@@ -6,7 +6,7 @@ classdef rover_RRT_planner < planner
         
         dt_edge=0.01 % RRT time discretization of each edge (trajectory between nodes)
         T_edge=0.5 % RRT duration of each edge
-        iter_max=1e4 % RRT iteration max
+        iter_max= 1e5 % RRT iteration max
         node_min=4 % RRT node
 
 
