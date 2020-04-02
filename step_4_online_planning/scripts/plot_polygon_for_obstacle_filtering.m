@@ -12,17 +12,17 @@ clear
 
 %  polygon to bound rechable set
 reachable_set_poly = [-0.3, 0.2,   1.75,  3.5,  3.5 ,  1.75, 0.2,-0.3,-0.3;...
-                      -0.2,-0.3,-1.75,-1.75,1.75  1.75,0.3,0.2,-0.2];
+                      -0.2,-0.3,-2,-2,2 , 2,0.3,0.2,-0.2];
 
 %% user parameters
 % initial condition bounds (recall that the state is (x,y,h,v), but the
 % robot's dynamics in SE(2) are position/translation invariant)
 v0_min = 0.0 ; % m/s
-v0_max = 2.0 ; % m/s
+v0_max = 2.25 ; % m/s
 
 % command bounds
-w0_min = -1.0 ; % rad/s
-w0_max =  1.0 ; % rad/s
+delta0_min = -0.5 ; % rad/s
+delta0_max =  0.5; % rad/s
 
 v_des_min = 0.5;
 v_des_max = 2.0;
@@ -50,20 +50,16 @@ T = 1.5;
 
 %% automated from here
 % create roveragent
-RoverLLC = rover_PD_LLC('yaw_gain',4,'yaw_rate_gain',1);
+RoverLLC = rover_PD_LLC('yaw_gain',5,'yaw_rate_gain',0.5);
 A = RoverAWD('LLC',RoverLLC,'max_speed',3) ;
 l = A.wheelbase;
 lr = A.rear_axel_to_center_of_mass;
-
-%convert yawrate to wheelangle to save
-delta0_min = min( A.yawrate_to_wheelangle([v0_max,v0_max,v0_min,v0_min],[w0_max,w0_min,w0_max,w0_min]));
-delta0_max = max( A.yawrate_to_wheelangle([v0_max,v0_max,v0_min,v0_min],[w0_max,w0_min,w0_max,w0_min]));
 
 % create initial condition vector
 v0_vec = linspace(v0_min,v0_max,N_samples) ;
 
 % create yaw commands
-w0_vec = linspace(w0_min,w0_max,N_samples) ;
+delta0_vec = linspace(delta0_min,delta0_max,N_samples) ;
 
 % create psi0 commands
 psiend_vec = linspace(psi_end_min,psi_end_max,N_samples);
@@ -102,10 +98,8 @@ err_idx = 1 ;
 tic
 % for each initial condition...
 for v0 = v0_vec
-    for w0 = w0_vec
+    for delta0 = delta0_vec
         
-        % get approximate initial wheel angle from yawrate
-        delta0 = A.yawrate_to_wheelangle(v0,w0);
 
         % create the feasible speed commands from the initial condition
         v_vec = linspace(max(v0 - diff_v,v_des_min), min(v0 + diff_v,v_des_max), N_samples) ;
@@ -119,15 +113,8 @@ for v0 = v0_vec
                 
                 %create feasible initial yawrate commands from initial
                 %condition
-                w0_des_min_temp = max(w0_des_min, -w0_des_min/psi_end_max*psi_end+w0_des_min);
-                w0_des_max_temp = min(w0_des_max, w0_des_max/-psi_end_min*psi_end+w0_des_max);
-                
-                if restrict_yaw_rate_based_on_velocity
-                    %create feasible initial yawarate commands from velocity
-                    %command
-                    w0_des_min_temp = max(w0_des_min_temp,  0.5 * v_des - 1.5);
-                    w0_des_max_temp = min(w0_des_max_temp, -0.5 * v_des + 1.5);
-                end
+                w0_des_min_temp = max(w0_des_min, 0.5*psi_end-1);
+                w0_des_max_temp = min(w0_des_max, 0.5*psi_end+1);
                 
                 w0_des_vec = linspace(w0_des_min_temp,w0_des_max_temp, N_samples);
                 

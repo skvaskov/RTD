@@ -12,8 +12,7 @@ methods
         lane_centerlines = world_info.lane_center_lines;
         
         
-        z = agent_info.position(:,end) ;
-        zpos = z(agent_info.position_indices);
+        zpos = agent_info.position(:,end) ;
         Nlanes = length(lane_centerlines);
         
          d = NaN(Nlanes,1);
@@ -47,14 +46,27 @@ methods
         % find lane you are closest to
         [~,lane_idx] = min(d);
         
-        if ~all(obstacle_present) && obstacle_present(lane_idx)
-            Lfree = ~obstacle_present;
-            idxfree = find(Lfree);
-            dfree = d(Lfree);
-            [~,lane_idx_free] = min(dfree);
-            lane_idx = idxfree(lane_idx_free);  
+        %lane switching for 2 lane road
+        if length(d) == 2
+            
+              if obstacle_present(lane_idx)
+              if lane_idx == 1
+                  lane_idx = 2;
+              elseif lane_idx == 2
+                  lane_idx = 1;
+              end
+              end
+        else %lane slection for any road
+            
+            if ~all(obstacle_present) && obstacle_present(lane_idx)
+                Lfree = ~obstacle_present;
+                idxfree = find(Lfree);
+                dfree = d(Lfree);
+                [~,lane_idx_free] = min(dfree);
+                lane_idx = idxfree(lane_idx_free);
+            end
         end
-      
+         
         
         if ~HLP.waypoints_include_heading
             waypoint = waypoint_candidate(1:2,lane_idx);

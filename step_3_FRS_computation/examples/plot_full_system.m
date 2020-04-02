@@ -24,7 +24,7 @@ W = [min([W(1),rotated_vertices(2,:)]),max([W(2),rotated_vertices(2,:)])];
 
 
 %% FRS
-load('rover_FRS_full_T1.5_deg6_v0_1.0_to_2.0_23-Mar-2020.mat');
+load('rover_FRS_full_T1.5_deg6_v0_1.0_to_2.0_24-Mar-2020.mat');
 %  FRS{2} = load('rover_FRS_full_T1.5_deg6_v0_1.0_to_2.0_22-Mar-2020.mat');
 % FRS{2} = load('rover_FRS_full_T1.5_deg6_psi0_-0.5_to_0.0_v0_1.0_to_2.0_18-Mar-2020.mat');
 % FRS{2}.x = FRS{2}.z(1);
@@ -33,7 +33,7 @@ load('rover_FRS_full_T1.5_deg6_v0_1.0_to_2.0_23-Mar-2020.mat');
 % FRS{2}.xoffset = FRS{2}.zoffset(1:2);
 
 
-k_test = [1;0;1];
+k_test = [-1;0;1];
 % k_test{2} = [1;0;0];
 % % k_test{3} = [1;0;0];
 
@@ -51,6 +51,7 @@ ztemp= cell(1,Nsamp);
 
 % g = [g_v_cos,-g_vy_sin;g_v_sin,g_vy_cos;0,0];
 f_fun = msspoly_to_fun(f,{t,z,k});
+g_offset_fun = msspoly_to_fun(g_offset,{t,z,k});
 g_fun = msspoly_to_fun(g,{t,z,k});
     z0 = ([0;0;0]+zoffset)./zscale;
 for i = 1:Nsamp
@@ -58,7 +59,7 @@ for i = 1:Nsamp
     d = 2*rand(2,1)-1;
 
     
-    [~,ztemp{i}] = ode45(@(t,z) f_fun(t,z,k_test)+g_fun(t,z,k_test)*d,[0 1],z0);
+    [~,ztemp{i}] = ode45(@(t,z) f_fun(t,z,k_test)+g_offset_fun(t,z,k_test)+g_fun(t,z,k_test)*d,[0 1],z0);
     
 end
 

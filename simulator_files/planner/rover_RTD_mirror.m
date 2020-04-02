@@ -266,12 +266,10 @@ classdef rover_RTD_mirror < multiFRS_RTD_planner
             
             P.trajopt_problem.bineq =[] ;
          
-                         P.trajopt_problem.k_bounds = [max([lower_k1,-1],[],'omitnan'),min([upper_k1,1],[],'omitnan');...
+            P.trajopt_problem.k_bounds = [max([lower_k1,-1],[],'omitnan'),min([upper_k1,1],[],'omitnan');...
                     max([lower_k3,-1]),min([upper_k3,1]) ];
                 
-                if any(P.trajopt_problem.k_bounds(:,2)-P.trajopt_problem.k_bounds(:,1) <0)
-                   a = 1; 
-                end
+     
       
             
         end

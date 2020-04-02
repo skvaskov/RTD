@@ -1,7 +1,7 @@
 function varargout = inspect_experiment_results(directory)
 % inspect_experiment_results()
 % inspect_experiment_results(directory)
-% [goals, collisions, planners] = inspect_experiment_results(directory)
+% [goals, collisions, planners,goal_list,collision_list] = inspect_experiment_results(directory)
 %
 % This function loads all of the experiment results .mat files in a given
 % directory and compiles the number of goals reached and number of
@@ -32,21 +32,21 @@ for idx = 1:N_files
     if contains(n,'summary')
         try
             load(f(idx).name)
-            
+
             goal_temp = [] ;
             collision_temp = [] ;
             for p_idx = 1:length(summary)
                 goal_temp = [goal_temp ; summary(p_idx).goal_check] ;
                 collision_temp = [collision_temp ; summary(p_idx).collision_check] ;
             end
-            
+
             goals = [goals, goal_temp] ;
             collisions = [collisions, collision_temp] ;
         catch
             disp(['Unable to process ',f(idx).name])
         end
     end
-    
+
     % report loading file progress
     if mod(idx,N_report) == 0
         disp([num2str(100*idx/N_files,'%0.0f'),' % complete'])
@@ -91,5 +91,5 @@ disp('--------------------------------------------------------------------')
 disp(' ')
 
 % set output args
-varargout = {goal_result, collision_result, planner_names} ;
+varargout = {goal_result, collision_result, planner_names,} ;
 varargout = varargout(1:nargout) ;

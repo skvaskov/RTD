@@ -13,11 +13,10 @@ degree = 4 ; % this should be 4 or 6 unless you have like 100+ GB of RAM
 
 
 %error function file
-load('rover_xy_error_functions_T1.5_v0_0.0_to_1.0_degx3_degy3.mat')
+load('rover_xy_error_functions_T1.2_v0_0.0_to_0.8_delta0_-0.50_to_-0.30_degx3_degy3.mat')
 %scaling function file
-load('rover_FRS_xy_scaling_T1.5_v0_0.0_to_1.0_20-Mar-2020.mat')
+load('rover_FRS_xy_scaling_T1.2_v0_0.0_to_0.8_delta0_-0.50_to_-0.30.mat')
 
-% whether or not to save output
 save_result = true;
 
 
@@ -40,17 +39,21 @@ v_des =    (v_des_max-v_des_min)/2*(k(3)+1)+v_des_min;
 
 % create polynomials that are positive on Z, and K, thereby
 % defining them as semi-algebraic sets; h_T is automatically generated
-upper_lim_k2 =  1 ;
-lower_lim_k2 =   -0.5+0.5*k(1) ;
+upper_lim_k1 =  1 ;
+lower_lim_k1 =  -0.5+0.5*k(2);
 
-hK = [(k(1)+1)*(1-k(1));...
-      (k(2)-lower_lim_k2)*(upper_lim_k2-k(2));...
+hK = [(k(1)-lower_lim_k1)*(upper_lim_k1-k(1));...
+      (k(2)+1)*(1-k(2));...
       (k(3)+1)*(1-k(3))]; 
-
+  
 hZ = (z+1).*(1-z);
 
-hZ0 = [-x^2;-y^2;-psi^2];
+%define initial footprint
 
+L = [min(A.footprint_vertices(1,:)), max(A.footprint_vertices(1,:))];
+W = [min(A.footprint_vertices(2,:)), max(A.footprint_vertices(2,:))];
+
+hZ0 = [(x-L(1))*(L(2)-x);(y-W(1))*(W(2)-y);-psi^2];
 
 %% specify dynamics and error function
 cos_psi = 1-psi^2/2;
@@ -78,8 +81,8 @@ g = scale.*[g_x;...
 
 %% create cost function
 % this time around, we care about the indicator function being on Z x K
-int_TZK{1} = boxMoments([t;z(1);k(2);k(1);k(3)], [0;-1;lower_lim_k2;-1;-1], [1;1;upper_lim_k2;1;1]);
-int_TZK{2} = boxMoments([t;z(2);k(2);k(1);k(3)], [0;-1;lower_lim_k2;-1;-1], [1;1;upper_lim_k2;1;1]);
+int_TZK{1} = boxMoments([t;z(1);k], [0;-1;lower_lim_k1;-1;-1],[1;1;upper_lim_k1;1;1]);
+int_TZK{2} = boxMoments([t;z(2);k], [0;-1;lower_lim_k1;-1;-1],[1;1;upper_lim_k1;1;1]);
 
 
 %% setup the problem structure for x and y
@@ -121,10 +124,12 @@ FRS_lyapunov_function_y = solver_output(2).lyapunov_function ;
 if save_result
     % create the filename for saving
     filename = ['rover_FRS_xy_T',num2str(T),'_deg',num2str(degree),...
-               '_v0_',num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),'_',date,'.mat'] ;
+               '_v0_',num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),...
+               '_delta0_',num2str(delta0_min,'%0.2f'),'_to_',num2str(delta0_max,'%0.2f'),...
+               '_',date,'.mat'] ;
 
     % save output
     disp(['Saving FRS output to file: ',filename])
     save(filename,'FRS_polynomial*','FRS_lyapunov_function*','t_f','t','z','k',...
-       'T', 'f','g','lower_lim_k2','upper_lim_k2','degree','solver_input_problem')
+       'T', 'f','g','degree','solver_input_problem')
 end

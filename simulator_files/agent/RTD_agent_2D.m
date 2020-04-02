@@ -96,7 +96,7 @@ classdef RTD_agent_2D < agent
             commit_move_data@agent(A,T_state,Z_state,T_used,U_used,Z_used) ;
             
             % also update the desired time/input/trajectory
-            if ~isempty(A.desired_time)
+            if ~isempty(A.desired_time) &&  length(A.desired_time) > 1
                 t_cur = A.desired_time(end-1) ;
             else
                 t_cur = 0 ;
