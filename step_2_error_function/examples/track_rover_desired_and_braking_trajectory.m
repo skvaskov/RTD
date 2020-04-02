@@ -23,7 +23,7 @@ l = A.wheelbase;
 lr = A.rear_axel_to_center_of_mass;
 
 %initial condition
-v0 = 1.0;
+v0 = 2.2;
 w0 = 1;
 
 z0 = [0;0;0;v0;w0];

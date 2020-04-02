@@ -21,8 +21,8 @@ lane_width = 0.6;
 bound_space = 0.4;
 
 % planner
-buffer = 0 ; % m
-t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+buffer = 0.1 ; % m
+t_plan = 10 ; % if t_plan = t_move, then real time planning is enforced
 t_move = 0.5 ;
 T_min = 1.5; %enough time to plan braking trajectory from 2 m/s
 T_max = 5;

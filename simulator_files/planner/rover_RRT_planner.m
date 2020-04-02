@@ -40,14 +40,16 @@ classdef rover_RRT_planner < planner
         
         obstacle_buffer = [0,0;0,0];
         
-        rrt_dynamics
+        rrt_dynamics 
         
         current_waypoint
         
-        speed_weight
-        steering_weight
-        lateral_weight
-        longitudinal_weight
+        speed_weight = 1
+        steering_weight = 1
+        lateral_weight = 1
+        longitudinal_weight = 1
+        steering_std_dev_factor = 1
+        straight_std_dev_factor = 1;
    
     end
     
@@ -68,10 +70,7 @@ classdef rover_RRT_planner < planner
     %% setup
     function setup(P,agent_info,world_info)
         
-        % get world bounds
-        P.upper_boundary = world_info.road_upper_boundary;
-        P.lower_boundary = world_info.road_lower_boundary;
-        
+
         % initialize old state
         P.T_old = 0 ;
         P.U_old = [0 ; 0] ;
@@ -101,6 +100,10 @@ classdef rover_RRT_planner < planner
         W = [min([W(1),rotated_vertices(2,:)]),max([W(2),rotated_vertices(2,:)])];
         
         P.obstacle_buffer = P.buffer*[-1,1;-1,1]+[L;W];
+        
+                % get world bounds
+        P.upper_boundary = world_info.road_upper_boundary;
+        P.lower_boundary = world_info.road_lower_boundary;
         
         
         % reset trajectory and tree
@@ -141,7 +144,7 @@ classdef rover_RRT_planner < planner
         P.current.t = P.current.t+P.t_move;
 
         % store polygon representation of obstacles for waypoint selection
-          O = world_info.obstacles;
+        O = world_info.obstacles;
         % put obstacles into problem (obstacles must be in ccw order
         % separated by NaNs)
         if ~isempty(O)
@@ -230,13 +233,11 @@ classdef rover_RRT_planner < planner
             if icur<50
                 v_thr_idx=randi(NVthr);
             elseif reached_dist
-                %v_thr_idx = round(randRange(1,NVthr,2*NVthr/4,NVthr/2)) ;
                 v_thr_idx=randi(NVthr);
                 reached_dist=false;
             else
                 v_thr_idx = round(randRange(1,NVthr,3*NVthr/4,NVthr/2)) ;
             end
-            v_brk_idx = round(randRange(1,NVbrk,3*NVbrk/4,NVbrk/2)) ;
 
             % get throttle input states
             x_near_thr  = Vthr(1,v_thr_idx) ;
@@ -249,19 +250,10 @@ classdef rover_RRT_planner < planner
             t_near_thr = Vthr(end-2,v_thr_idx) ;
             Ccum_near_thr = Vthr(end,v_thr_idx) ;
             
-            % get brake input states
-            x_near_brk = Vbrk(1,v_brk_idx) ;
-            y_near_brk = Vbrk(2,v_brk_idx) ;
-            h_near_brk = Vbrk(3,v_brk_idx) ;
-            vx_near_brk = Vbrk(4,v_brk_idx) ;
-            z_near_brk = Vbrk(1:5,v_brk_idx) ;           
-            delta_des_near_brk = Ubrk(2,v_brk_idx);
-            t_near_brk = Vbrk(end-2,v_brk_idx) ;
-            Ccum_near_brk = Vbrk(end,v_brk_idx) ;
-
-        %% generate random inputs
+ %% generate random inputs for throttle
             % generate steering input to turn towards local waypoint for
             % throttle tree
+
             v_in = randRange(P.min_speed,P.max_speed);
             
             dupper_thr =  P.max_wheelangle*(P.upper_boundary(2,1)-y_near_thr)./P.upper_boundary(2,1);
@@ -270,50 +262,95 @@ classdef rover_RRT_planner < planner
             dupper_hdg_thr = atan(((P.max_heading-h_near_thr)/P.T_edge)*agent_info.wheelbase/v_in);
             dlower_hdg_thr = atan(((-P.max_heading-h_near_thr)/P.T_edge)*agent_info.wheelbase/v_in);
             
-            wa_in_thr = randRange(max([-P.max_wheelangle,dlower_thr,dlower_hdg_thr]),min([P.max_wheelangle,dupper_thr,dupper_hdg_thr]));
+            if x_near_thr-wp(1) == 0
+                wpt_angle = 0;
+            else
+                wpt_angle = atan((y_near_thr-wp(2))/(x_near_thr-wp(1)));
+            end
             
-            dupper_brk =  P.max_wheelangle*(P.upper_boundary(2,1)-y_near_brk)/P.upper_boundary(2,1);
-            dlower_brk = -P.max_wheelangle*(P.lower_boundary(2,1)-y_near_brk)/P.lower_boundary(2,1);
+            wa_mean = atan((wpt_angle-h_near_thr)/P.T_edge*agent_info.wheelbase/v_in);
             
-            dupper_hdg_brk = atan(((P.max_heading-h_near_thr)/P.T_edge)*agent_info.wheelbase/vx_near_brk);
-            dlower_hdg_brk = atan(((-P.max_heading-h_near_thr)/P.T_edge)*agent_info.wheelbase/vx_near_brk);
+            if abs(y_near_thr-wp(2)) < world_info.lane_width/2
+                steering_std_dev = P.straight_std_dev_factor;
+            else
+                steering_std_dev = P.steering_std_dev_factor;
+            end
             
-            wa_in_brk = randRange(max([-P.max_wheelangle,dlower_brk,dlower_hdg_brk]),min([P.max_wheelangle,dupper_brk,dupper_hdg_brk]));
+            wa_std_dev = steering_std_dev*P.max_wheelangle;
+            
+            wa_in_thr = randRange(max([-P.max_wheelangle,dlower_thr,dlower_hdg_thr]),min([P.max_wheelangle,dupper_thr,dupper_hdg_thr]),wa_mean,wa_std_dev);
+            
             
             Uin_thr = [v_in; wa_in_thr];
-            Uin_brk = [0; wa_in_brk];
 
+            
+            %% IF we have not found a braking trajectory yet, add another node to the brake tree
+            if ~feas_flag_brk
+                v_brk_idx = round(randRange(1,NVbrk,3*NVbrk/4,NVbrk/2)) ;
+                % get brake input states
+                x_near_brk = Vbrk(1,v_brk_idx) ;
+                y_near_brk = Vbrk(2,v_brk_idx) ;
+                h_near_brk = Vbrk(3,v_brk_idx) ;
+                vx_near_brk = Vbrk(4,v_brk_idx) ;
+                z_near_brk = Vbrk(1:5,v_brk_idx) ;
+                delta_des_near_brk = Ubrk(2,v_brk_idx);
+                t_near_brk = Vbrk(end-2,v_brk_idx) ;
+                Ccum_near_brk = Vbrk(end,v_brk_idx) ;
+                
+                %% generate random inputs for break
+                dupper_brk =  P.max_wheelangle*(P.upper_boundary(2,1)-y_near_brk)/P.upper_boundary(2,1);
+                dlower_brk = -P.max_wheelangle*(P.lower_boundary(2,1)-y_near_brk)/P.lower_boundary(2,1);
+                
+                dupper_hdg_brk = atan(((P.max_heading-h_near_thr)/P.T_edge)*agent_info.wheelbase/vx_near_brk);
+                dlower_hdg_brk = atan(((-P.max_heading-h_near_thr)/P.T_edge)*agent_info.wheelbase/vx_near_brk);
+                
+                wa_in_brk = randRange(max([-P.max_wheelangle,dlower_brk,dlower_hdg_brk]),min([P.max_wheelangle,dupper_brk,dupper_hdg_brk]));
+                
+                Uin_brk = [0; wa_in_brk];
+            end
+            
         %% generate new node
             Z_new_thr = NaN(5,length(Tin));
             Z_new_thr(:,1) = z_near_thr;
             
-            Z_new_brk = NaN(5,length(Tin));
-            Z_new_brk(:,1) = z_near_brk;
+            if ~feas_flag_brk
+                Z_new_brk = NaN(5,length(Tin));
+                Z_new_brk(:,1) = z_near_brk;
+            end
             
             % Forward Euler integrate random inputs
             for i = 2:length(Tin)
+                
                 tidx = Tin(i) ;
                 Z_new_thr(:,i) = P.dt_edge*P.rrt_dynamics(tidx,Z_new_thr(:,i-1),Uin_thr) + Z_new_thr(:,i-1);
+                
+                if ~feas_flag_brk
                 Z_new_brk(:,i) = P.dt_edge*P.rrt_dynamics(tidx,Z_new_brk(:,i-1),Uin_brk) + Z_new_brk(:,i-1);
+                end
+                
             end
 
 
             z_new_thr = Z_new_thr(:,end) ;
-            z_new_brk = Z_new_brk(:,end) ;
-
             x_new_thr = z_new_thr(1) ; y_new_thr = z_new_thr(2) ;
+            
+            if ~feas_flag_brk
+            z_new_brk = Z_new_brk(:,end) ;
             x_new_brk = z_new_brk(1) ; y_new_brk = z_new_brk(2) ;
-
+            end
         %% check if new node is feasible
             traj_feasible_thr = true ;
-            traj_feasible_brk = true ;
-            
+    
             % check if new vertex is inside world bounds
             bound_check_thr = all(y_new_thr >= P.lower_boundary(2,:)) && all(y_new_thr <= P.upper_boundary(2,:));
-            bound_check_brk = all(y_new_brk >= P.lower_boundary(2,:)) && all(y_new_brk <= P.upper_boundary(2,:));
             
             traj_feasible_thr = traj_feasible_thr && bound_check_thr ;
-            traj_feasible_brk = traj_feasible_brk && bound_check_brk ;
+            
+            if ~feas_flag_brk
+                traj_feasible_brk = true ;
+                bound_check_brk = all(y_new_brk >= P.lower_boundary(2,:)) && all(y_new_brk <= P.upper_boundary(2,:));
+                traj_feasible_brk = traj_feasible_brk && bound_check_brk ;
+            end
             
             if ~isempty(O)
                 % check if new edge intersects obstacle
@@ -322,7 +359,7 @@ classdef rover_RRT_planner < planner
                     traj_feasible_thr = traj_feasible_thr && ~any(in_thr) ;
                 end
                 
-                if traj_feasible_brk
+                if traj_feasible_brk && ~feas_flag_brk
                     [in_brk,~] = inpolygon(Z_new_brk(1,:)',Z_new_brk(2,:)',O(1,:)',O(2,:)') ;
                     traj_feasible_brk = traj_feasible_brk && ~any(in_brk) ;
                 end
@@ -331,14 +368,12 @@ classdef rover_RRT_planner < planner
             % check if new nodes are within max dist of current car
             % location
             node_dist_thr = dist_point_to_points(Z_new_thr(1:2,end),P.agent_state(agent_info.position_indices)) ;
-            node_dist_brk = dist_point_to_points(Z_new_brk(1:2,end),P.agent_state(agent_info.position_indices)) ;
             
             if node_dist_thr>P.max_distance
                 reached_dist=true;
             end
             
             traj_feasible_thr = traj_feasible_thr && (node_dist_thr <= P.max_distance) ;
-            traj_feasible_brk = traj_feasible_brk && (node_dist_brk <= P.max_distance) ;
             
         %% update throttle and braking trees with new node
             % hardcoded weights on control inputs for now
@@ -349,18 +384,32 @@ classdef rover_RRT_planner < planner
                 NVthr = NVthr + 1 ;
 
                 % generate cost
-                min_dist_to_obs = min(dist_point_to_points(z_new_thr(1:2),O)) ;
-             
-      
-                dist_to_wp_x = (x_new_thr-wp(1))^2;
-                dist_to_wp_y = (y_new_thr-wp(2))^2;
+                min_dist_to_obs = min(dist_point_to_points(z_new_thr(1:2),O));
                 
-                Cnode_thr = 1/min_dist_to_obs +  P.longitudinal_weight*dist_to_wp_x;
+                min_dist_to_bounds = min(dist_point_to_polyline(y_new_thr,P.lower_boundary),...
+                                         dist_point_to_polyline(y_new_thr,P.upper_boundary));
+             
+                if min_dist_to_bounds < min(agent_info.footprint)/2
+                    bound_cost = 1/min_dist_to_bounds;
+                else
+                    bound_cost = 0;
+                end
+                
+                if min_dist_to_bounds < min(agent_info.footprint)/2
+                    obs_cost = 1/min_dist_to_obs;
+                else
+                    obs_cost = 0;
+                end
+                                     
+                dist_to_wp_x = abs(x_new_thr-wp(1));
+                dist_to_wp_y = abs(y_new_thr-wp(2));
+                
+                Cnode_thr =  P.longitudinal_weight*dist_to_wp_x;
                
                 
                 % track control input
                 
-                Ccum_thr = P.T_edge*(P.speed_weight*(Uin_thr(1)-P.desired_speed)^2+ P.steering_weight*Uin_thr(2)^2 + P.lateral_weight*(dist_to_wp_y)^2) + Ccum_near_thr  ;
+                Ccum_thr = P.T_edge*( bound_cost+ obs_cost+P.speed_weight*(Uin_thr(1)-P.desired_speed)^2+ P.steering_weight*Uin_thr(2)^2 + P.lateral_weight*dist_to_wp_y) + Ccum_near_thr  ;
                 
                 % add new node to tree
                 t_new = t_near_thr + P.T_edge ;
@@ -389,7 +438,7 @@ classdef rover_RRT_planner < planner
             end
             
             % update braking tree
-            if traj_feasible_brk
+            if traj_feasible_brk && ~feas_flag_brk
                 % update index
                 NVbrk = NVbrk + 1 ;
                                     
@@ -411,7 +460,7 @@ classdef rover_RRT_planner < planner
                  % add new node to tree
                 t_new = t_near_brk + P.T_edge ;
                 
-                if  t_new > P.T_min && ~feas_flag_brk &&  NVbrk >= P.node_min
+                if  t_new > P.T_min && ~feas_flag_brk &&  NVbrk >= P.node_min && abs(z_new_brk(4))<0.01
                     t_to_feas_brk = toc(t_to_feas_brk) ;
                     N_to_feas_brK = NVbrk ;
                     feas_flag_brk = true ;
@@ -431,14 +480,6 @@ classdef rover_RRT_planner < planner
         P.current_nodes_brk = Vbrk(:,1:NVbrk) ;
         
         %% use tree to construct output time/input/trajectory
-        % decide whether to brake or not based on which trajectory has
-        % nodes closest to the waypoint
-        dists_to_wp_thr = dist_point_to_points(wp,Vthr(1:2,:)) ;
-        dists_to_wp_brk = dist_point_to_points(wp,Vbrk(1:2,:)) ;
-        min_dist_thr = min(dists_to_wp_thr) ;
-        min_dist_brk = min(dists_to_wp_brk) ;
-        
-       
 
         % create output as throttle or braking traj
         I = P.info ;

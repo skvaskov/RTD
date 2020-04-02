@@ -6,15 +6,14 @@ close all;
 %
 % Author: Sean Vaskov
 % Created: 26 Mar 2020
-% Updated: -
 %
 %% user parameters
 N_worlds = 1000;
 % world parameters
-obstacle_size_bounds = [0.3,0.7;0.2,0.4] ; 
+obstacle_size_bounds = [0.3,0.6;0.2,0.4] ; 
 obstacle_long_spacing = [0,8];
-obstacle_long_spacing_mean = 5;
-obstacle_long_spacing_std_dev = 1.0;
+obstacle_long_spacing_mean = 4;
+obstacle_long_spacing_std_dev = 0.6;
 obstacle_lat_spacing = [-0.1 0.1];
 obstacle_rotation_bounds = [-1,1]*2*pi/180;
 N_obstacles = 3  ;
