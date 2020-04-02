@@ -31,7 +31,7 @@ sin_psi = psi-psi^3/6;
 
 % compute dynamics (wheel slip term will be incorporated into g function)
 zd = [v_des*cos_psi-lr*w_des*sin_psi ;
-    v_des*sin_psi+lr*w_des*cos_psi ;
-    w_des] ;
+      v_des*sin_psi+lr*w_des*cos_psi ;
+      w_des] ;
 
 end

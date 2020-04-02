@@ -12,8 +12,8 @@ clear ; clc ; close all ;
 
 % load the error functions and distance scales
 load('rover_xy_error_functions_T1.5_v0_1.0_to_2.0_degx3_degy3.mat')
-load('rover_FRS_scaling_xy_T1.5_w0des_0.0_to_1.0_v0_1.0_to_2.0_19-Mar-2020.mat')
-load('rover_FRS_xy_T1.5_deg6_v0_1.0_to_2.0_19-Mar-2020.mat')
+load('rover_FRS_xy_scaling_T1.5_v0_1.0_to_2.0_24-Mar-2020.mat')
+load('rover_FRS_xy_T1.5_deg8_v0_1.0_to_2.0_25-Mar-2020.mat')
   
 %enter maximum heading rotation (footprint will be a bounding box covering
 %this)
@@ -27,7 +27,7 @@ g = [g(1,1),0;0,g(2,1);0,0];
 %% if plotting sample f and g
 
 Nsamp = 50;
-k_test = [1;1;1];
+k_test = [0;-1;1];
 
 Xvec = linspace(-1,1,100);
 tvec = linspace(0,1,5);
@@ -75,7 +75,7 @@ end
 
 for i = 1:Nsamp
     d = 2*rand(2,1)-1;
-    z0 = [0;0;0];
+    z0 = randRange([min(A.footprint_vertices,[],2);0],[max(A.footprint_vertices,[],2);0]);
     
     [ttemp,ztemp{i}] = ode45(@(t,z) f_fun(t,z,k_test)+g_fun(t,z,k_test)*d,[0 1],(z0+zoffset)./zscale);
     ztvec{i} = interp1(ttemp,ztemp{i},tvec);

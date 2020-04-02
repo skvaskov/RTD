@@ -1,7 +1,7 @@
 function varargout = inspect_experiment_results(directory)
 % inspect_experiment_results()
 % inspect_experiment_results(directory)
-% [goals, collisions, planners] = inspect_experiment_results(directory)
+% [goals, collisions, planners,goal_list,collision_list] = inspect_experiment_results(directory)
 %
 % This function loads all of the experiment results .mat files in a given
 % directory and compiles the number of goals reached and number of
@@ -10,7 +10,7 @@ function varargout = inspect_experiment_results(directory)
 %
 % Author: Shreyas Kousik
 % Created: 25 Mar 2020
-% Updated: 27 Mar 2020
+% Updated:  1 Apr 2020
 
 if nargin < 1
     f = dir(pwd) ;
@@ -87,5 +87,5 @@ disp('--------------------------------------------------------------------')
 disp(' ')
 
 % set output args
-varargout = {goal_result, collision_result, planner_names} ;
+varargout = {goal_result, collision_result, planner_names,} ;
 varargout = varargout(1:nargout) ;

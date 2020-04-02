@@ -1,6 +1,7 @@
 classdef RoverAWD < RTD_agent_2D
     properties
         max_speed = 2;
+        min_speed = 0;
         max_wheelangle = 0.5;
         speed_index = 4;
         wheelbase = 0.3265;
@@ -38,7 +39,7 @@ classdef RoverAWD < RTD_agent_2D
             l = A.wheelbase;
             wheelangle = atan(yawrate.*(l+4.4e-7*v.^2)./v);
             
-            wheelangle(v==0) = 0;  
+            wheelangle(v==0) = sign(yawrate)*A.max_wheelangle;  
         end
         
         function vy = wheelangle_to_lateral_veloctity(A,v,wheelangle)
@@ -65,7 +66,7 @@ classdef RoverAWD < RTD_agent_2D
             delta_des = u(2);
             
             % saturate the inputs
-            v_des = bound_values(v_des,A.max_speed) ;
+            v_des = bound_values(v_des,A.min_speed,A.max_speed) ;
             delta_des = bound_values(delta_des,A.max_wheelangle) ;
                    
             % calculate the derivatives
@@ -82,6 +83,7 @@ classdef RoverAWD < RTD_agent_2D
             
             xd = v*cos(h)-vy*sin(h);
             yd = v*sin(h)+vy*cos(h);
+            
             hd = w ;
             if v_des == 0 && abs(v) <0.1
               vd = -30*(v-v_des);

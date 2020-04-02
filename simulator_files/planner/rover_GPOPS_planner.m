@@ -27,6 +27,10 @@ classdef rover_GPOPS_planner< planner
         max_speed = 2;
         min_speed = 0;
         max_wheelangle = 0.5;
+        speed_weight =1;
+        longitudinal_weight = 1;
+        steering_weight = 1;
+        lateral_weight = 1;
         
         obstacle_buffer = [0,0;0,0];
    
@@ -92,7 +96,7 @@ classdef rover_GPOPS_planner< planner
         L = [min([L(1),rotated_vertices(1,:)]),max([L(2),rotated_vertices(1,:)])];
         W = [min([W(1),rotated_vertices(2,:)]),max([W(2),rotated_vertices(2,:)])];
         
-        P.obstacle_buffer = P.buffer+[L;W];
+        P.obstacle_buffer = P.buffer*[-1,1;-1 1]+[L;W];
         
     end
 
@@ -183,7 +187,7 @@ classdef rover_GPOPS_planner< planner
         
         %**road constraint should be negative, obstacle constraints should be
         %positive**
-         P.gpops_problem.bounds.phase.path.lower = zeros(1,P.gpops_problem.auxdata.NObs );
+         P.gpops_problem.bounds.phase.path.lower = zeros(1,P.gpops_problem.auxdata.NObs);
          P.gpops_problem.bounds.phase.path.upper = Inf(1,P.gpops_problem.auxdata.NObs);
              
        
@@ -345,6 +349,10 @@ classdef rover_GPOPS_planner< planner
         auxdata.timer_start = tic ;
         auxdata.timeout = P.timeout ;
         auxdata.desired_speed = P.desired_speed;
+        auxdata.speed_weight = P.speed_weight;
+        auxdata.longitudinal_weight = P.longitudinal_weight;
+        auxdata.lateral_weight = P.lateral_weight;
+        auxdata.steering_weight = P.steering_weight;
 
         % finalize setting up GPOPS problem object
         out.bounds = bounds ;
@@ -371,7 +379,7 @@ lr = 0.0765;
 
     % states z = [x,y,h,vx,vy,yr]
 %     x = input.phase.state(:,1);
-%     y = input.phase.state(:,2);
+   y = input.phase.state(:,2);
     h = input.phase.state(:,3);
     vx = input.phase.state(:,4);
     delta = input.phase.state(:,5);
@@ -394,7 +402,12 @@ lr = 0.0765;
     out.dynamics  = dzdt ;
     
     %add input cost
-    out.integrand= 10 * (input.phase.control(:,1)-input.auxdata.desired_speed).^2+input.phase.control(:,2).^2;
+    gy = input.auxdata.goal(2) ;
+    speed_weight = input.auxdata.speed_weight;
+    steering_weight = input.auxdata.steering_weight;
+    lateral_weight = input.auxdata.lateral_weight;
+    
+    out.integrand= speed_weight * (input.phase.control(:,1)-input.auxdata.desired_speed).^2+steering_weight*input.phase.control(:,2).^2 +lateral_weight*(y-gy).^2;
     
 
         
@@ -423,15 +436,14 @@ end
 
 function out = endpoint_function(input)
         x = input.phase.finalstate(1);
-        y = input.phase.finalstate(2);
+
 
         gx = input.auxdata.goal(1) ;
-        gy = input.auxdata.goal(2) ;
-       
+    
+        longitudinal_weight = input.auxdata.longitudinal_weight;
         
-        location_weight = [2 2];
 
-        out.objective = location_weight(1)*(x-gx).^2 + location_weight(2)*(y-gy).^2+input.phase.integral;
+        out.objective = longitudinal_weight*(x-gx).^2 +input.phase.integral;
 
         if timeout_check(input)
              error('out of time')

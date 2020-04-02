@@ -78,7 +78,7 @@ for w_0 = w_0_vec
             % disp(['       w_des = ',num2str(w_des,'%0.2f')])
             
             for v_des = v_vec
-                % disp(['       v_des = ',num2str(v_des,'%0.2f')])
+                % disp(['v_des = ',num2str(v_des,'%0.2f')])
                 % make the desired trajectory
                 [T_des,U_des,Z_des] = make_segway_desired_trajectory(t_f,w_des,v_des) ;
                 
