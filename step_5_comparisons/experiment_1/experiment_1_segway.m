@@ -84,7 +84,7 @@ function experiment_1_segway(world_start_index,world_end_index,...
         W = W_all{w_idx} ;
 
         % adjust the world properties
-        W.buffer = max(A.footprint + additional_buffers) ;
+        W.buffer = max(buffer_sizes) ;
         W.verbose = verbose_level ;
 
         % make a simulator for this world and all of the planners
