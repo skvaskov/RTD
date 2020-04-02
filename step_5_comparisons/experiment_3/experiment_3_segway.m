@@ -11,16 +11,16 @@ function experiment_3_segway(world_start_index,world_end_index,...
 %
 % Author: Shreyas Kousik
 % Created: 27 Mar 2020
-% Updated: -
+% Updated: 2 Apr 2020
 %
 %% experiment parameters
     % agent
     sensor_radius = 1.875 ;
 
     % planner
-    buffer = 0.001 ; % m (this is added to the agent footprint)
-    t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
     t_move = 0.5 ;
+    t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+    buffer = 0.001 ; % m (this is added to the agent footprint)
     plot_HLP_flag = true ;
     plot_waypoints_flag = true ;
     plot_FRS_flag = true ;
@@ -45,11 +45,14 @@ function experiment_3_segway(world_start_index,world_end_index,...
     A = segway_agent('sensor_radius',sensor_radius) ;
 
     % create planners
+    n = 'Segway RTD Planner, Experiment 3' ;
+    
     P = segway_RTD_planner('verbose',verbose_level,'buffer',buffer,...
         't_plan',t_plan,'t_move',t_move,...
         'plot_HLP_flag',plot_HLP_flag,...
         'plot_waypoints_flag',plot_waypoints_flag,...
-        'plot_FRS_flag',plot_FRS_flag) ;
+        'plot_FRS_flag',plot_FRS_flag,...
+        'name',n) ;
 
     load('segway_simulation_worlds.mat')
 

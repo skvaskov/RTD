@@ -10,7 +10,7 @@ function varargout = inspect_experiment_results(directory)
 %
 % Author: Shreyas Kousik
 % Created: 25 Mar 2020
-% Updated: 27 Mar 2020
+% Updated: 2 Apr 2020
 
 if nargin < 1
     f = dir(pwd) ;
@@ -22,25 +22,29 @@ end
 N_files = length(f) ;
 N_report = floor(N_files/10) ;
 
-goal = [] ;
-collision = [] ;
+goals = [] ;
+collisions = [] ;
 
 disp('Loading data')
 tic
 for idx = 1:N_files
     n = f(idx).name ;
     if contains(n,'summary')
-        load(f(idx).name)
-        
-        goal_temp = [] ;
-        collision_temp = [] ;
-        for p_idx = 1:length(summary)
-            goal_temp = [goal_temp ; summary(p_idx).goal_check] ;
-            collision_temp = [collision_temp ; summary(p_idx).collision_check] ;
+        try
+            load(f(idx).name)
+            
+            goal_temp = [] ;
+            collision_temp = [] ;
+            for p_idx = 1:length(summary)
+                goal_temp = [goal_temp ; summary(p_idx).goal_check] ;
+                collision_temp = [collision_temp ; summary(p_idx).collision_check] ;
+            end
+            
+            goals = [goals, goal_temp] ;
+            collisions = [collisions, collision_temp] ;
+        catch
+            disp(['Unable to process ',f(idx).name])
         end
-        
-        goal = [goal, goal_temp] ;
-        collision = [collision, collision_temp] ;
     end
     
     % report loading file progress
@@ -51,14 +55,14 @@ end
 toc
 
 % sanity check
-if isempty(goal)
+if isempty(goals)
     error('Please navigate to a directory containing experiment data!')
 end
 
 % get total number of goals and collisions
-goal_result = sum(goal,2) ;
-collision_result = sum(collision,2) ;
-N_worlds_str = num2str(size(goal,2)) ;
+goal_result = sum(goals,2) ;
+collision_result = sum(collisions,2) ;
+N_worlds_str = num2str(size(goals,2)) ;
 
 % get planner names
 planner_names = {} ;

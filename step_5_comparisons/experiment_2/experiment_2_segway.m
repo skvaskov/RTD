@@ -12,18 +12,18 @@ function experiment_2_segway(world_start_index,world_end_index,...
 %
 % Author: Shreyas Kousik
 % Created: 27 Mar 2020
-% Updated: -
+% Updated: 2 Apr 2020
 %
 %% experiment parameters
     % agent
     sensor_radius = 100 ;
 
     % planners
-    RTD_buffer = 0.001 ;
-    RRT_buffer = 0.38 + 0.05 ;
-    NMPC_buffer = 0.38 + 0.05 ;
-    t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
     t_move = 0.5 ;
+    t_plan = 0.5 ; % if t_plan = t_move, then real time planning is enforced
+    RTD_buffer = 0.001 ;
+    RRT_buffer = 0.45 ;
+    NMPC_buffer = 0.45 ;
     plot_HLP_flag = true ;
     plot_waypoints_flag = true ;
 
@@ -44,7 +44,7 @@ function experiment_2_segway(world_start_index,world_end_index,...
     end
     summary_filename_header = 'segway_experiment_2_summary' ;
 
-    %% experiment setup
+%% experiment setup
     % create agent
     A = segway_agent('sensor_radius',sensor_radius) ;
     
@@ -53,31 +53,40 @@ function experiment_2_segway(world_start_index,world_end_index,...
     p_idx = 1 ;
     
     if run_RTD_planner_flag
+        n = 'Segway RTD Planner, Experiment 2' ;
+        
         P{p_idx} = segway_RTD_planner('verbose',verbose_level,...
             'buffer',RTD_buffer,...
             't_plan',t_plan,'t_move',t_move,...
             'plot_HLP_flag',plot_HLP_flag,...
-            'plot_waypoints_flag',plot_waypoints_flag) ;
+            'plot_waypoints_flag',plot_waypoints_flag,...
+            'name',n) ;
         
         p_idx = p_idx + 1 ;
     end
     
     if run_RRT_planner_flag
+        n = 'Segway RRT Planner, Experiment 2' ;
+        
         P{p_idx} = segway_RRT_planner('verbose',verbose_level,...
             'buffer',RRT_buffer,...
             't_plan',t_plan,'t_move',t_move,...
             'plot_HLP_flag',plot_HLP_flag,...
-            'plot_waypoints_flag',plot_waypoints_flag) ;
+            'plot_waypoints_flag',plot_waypoints_flag,...
+            'name',n) ;
         
         p_idx = p_idx + 1 ;
     end
     
     if run_NMPC_planner_flag
+        n = 'Segway NMPC Planner, Experiment 2' ;
+        
         P{p_idx} = segway_NMPC_planner('verbose',verbose_level,...
             'buffer',NMPC_buffer,...
             't_plan',t_plan,'t_move',t_move,...
             'plot_HLP_flag',plot_HLP_flag,...
-            'plot_waypoints_flag',plot_waypoints_flag) ;
+            'plot_waypoints_flag',plot_waypoints_flag,...
+            'name',n) ;
         
         p_idx = p_idx + 1 ;
     end
@@ -85,7 +94,7 @@ function experiment_2_segway(world_start_index,world_end_index,...
     % load worlds
     load('segway_simulation_worlds.mat')
 
-    %% run simulations
+%% run experiment
     for w_idx = world_start_index:world_end_index
         % get the current world
         W = W_all{w_idx} ;
