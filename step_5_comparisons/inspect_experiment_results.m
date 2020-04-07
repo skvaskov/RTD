@@ -48,7 +48,7 @@ for idx = 1:N_files
     end
 
     % report loading file progress
-    if mod(idx,N_report) == 0
+    if mod(idx,N_report) == 0 && (~isempty(goals))
         disp([num2str(100*idx/N_files,'%0.0f'),' % complete'])
     end
 end
