@@ -1,0 +1,10 @@
+{
+  "_schemaVersion": "1.0.0",
+  "inspect_experiment_results":
+  {
+     "inputs":
+     [
+        {"name":"in1", "kind":"optional", "type":"filepath"}
+     ]
+  }
+}
