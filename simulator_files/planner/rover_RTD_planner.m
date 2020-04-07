@@ -138,11 +138,9 @@ classdef rover_RTD_planner < generic_RTD_planner
                 Dx = F.zscale(1);
                 Dy = F.zscale(2);
                
+        
                 
-                R = [cos(P.agent_state(3)), -sin(P.agent_state(3)) ;
-                    sin(P.agent_state(3)), cos(P.agent_state(3))] ;
-                
-                O_center =  R'*(O-P.agent_state(1:2));
+                O_center =  rotation_matrix_2D(P.agent_state(3))'*(O-P.agent_state(1:2));
                 
                 %get rid of obstacles that are unreachable because they lie
                 %outside of a polygon that contains the reachable set for

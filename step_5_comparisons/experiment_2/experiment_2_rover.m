@@ -1,5 +1,10 @@
-function experiment_2_rover(index_list,save_flag,plot_fag)
-
+function experiment_2_rover(index_list,save_flag,plot_fag,save_planner_info_flag)
+if nargin <4
+    save_planner_info_flag = false;
+    if nargin<3
+        plot_fag = false;
+    end
+end
 %% description
 % This script runs RRT, NMPC, RTD planners with real time planning
 % constraints. Buffer sizes for RRT and NMPC were determined from
@@ -54,7 +59,7 @@ run_RTD_planner_flag = true ;
 
 verbose_level = 2 ;
 max_sim_iterations = 120 ;
-max_sim_time = t_plan*max_sim_iterations*1.25 ;
+max_sim_time = t_plan*max_sim_iterations*5 ;
 plot_while_running = plot_fag;
 plot_frs_contour = plot_fag;
 plot_hlp = plot_fag ;
@@ -98,8 +103,7 @@ end
 
 if run_RTD_planner_flag
     P{p_idx} = rover_RTD_planner('FRS_directory',FRS_directory,'HLP',lane_HLP,'timeout',t_plan,'t_plan',t_plan,'t_move',t_move,...
-        'buffer',buffer_rtd,'lookahead_distance',lookahead_distance,'plot_FRS_flag',plot_frs_contour,'plot_HLP_flag',plot_hlp,'name','RTD','filtering_poly',reachable_set_poly);
-    
+        'buffer',buffer_rtd,'lookahead_distance',lookahead_distance,'plot_FRS_flag',plot_frs_contour,'plot_HLP_flag',plot_hlp,'name','RTD','filtering_poly',reachable_set_poly);  
 end
 
 load('rover_simulation_worlds.mat')
@@ -116,7 +120,8 @@ for w_idx = index_list
     S = simulator(A,W,P,'allow_replan_errors',allow_replan_errors,'verbose',verbose_level,...
         'max_sim_time',max_sim_time,...
         'max_sim_iterations',max_sim_iterations,...
-        'plot_while_running',plot_while_running) ;
+        'plot_while_running',plot_while_running,...
+        'save_planner_info',save_planner_info_flag) ;
     
     % run the simulator
     summary = S.run() ;

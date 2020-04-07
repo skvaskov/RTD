@@ -9,9 +9,9 @@ clear;close all
 %
 %% user parameters
 t_f = 2 ;
-w_0 = -1 ; % rad/s
+w_0 = 0 ; % rad/s
 psi_end = 0;
-v_des = 2 ; % m/s
+v_des = 1 ; % m/s
 t_plan = 0.5; %s
 t_stop = 3; %s
 
@@ -23,8 +23,8 @@ l = A.wheelbase;
 lr = A.rear_axel_to_center_of_mass;
 
 %initial condition
-v0 = 2.2;
-w0 = 1;
+v0 = 2.0;
+w0 = 0;
 
 z0 = [0;0;0;v0;w0];
 z0(5)= A.yawrate_to_wheelangle(v0,w0);

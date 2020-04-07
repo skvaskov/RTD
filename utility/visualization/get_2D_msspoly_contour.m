@@ -22,7 +22,7 @@ function h = get_2D_msspoly_contour(p,x,l,varargin)
     Offset = [0;0] ;
     Scale = [1;1] ;
     pose0 = [0;0;0];
-    
+    N = 100;
     % iterate through varargin to find Offset and Scale
     varargin_new = {} ;
     idx_new = 1 ;
@@ -34,6 +34,8 @@ function h = get_2D_msspoly_contour(p,x,l,varargin)
                 Scale = varargin{idx+1} ;
             case 'pose'
                 pose0 = varargin{idx+1};
+            case 'N'
+                N = varargin{idx+1};
             otherwise
                 varargin_new{idx_new} = varargin{idx} ;
                 varargin_new{idx_new+1} = varargin{idx+1} ;
@@ -43,25 +45,24 @@ function h = get_2D_msspoly_contour(p,x,l,varargin)
 
 %% set up for plotting
     % set up grid for plotting
-    x_vec = linspace(-1,1,100) ;
+    x_vec = linspace(-1,1,N) ;
     [X1,X2] = meshgrid(x_vec,x_vec) ;
     X = [X1(:), X2(:)]' ;
     
     % create msspoly surface
-     P = reshape(full(msubs(p,x,X)),100,100) ;
+     P = reshape(full(msubs(p,x,X)),N,N) ;
     
-%     % scale and shift for plotting
+     h = contourc(x_vec,x_vec,P,[l l]) ;
+     
+    h(:,h(1,:) == l) = NaN;
+
 
     % scale and shift for plotting
-    X1 = Scale(1)*(x_vec) + Offset(1) ;
-    X2 = Scale(2)*(x_vec) + Offset(2) ;
+    h = repmat([Scale(1);Scale(2)],[1 size(h,2)]).*h + [Offset(1);Offset(2)] ;
    
 %% plot
  
-    h = contourc(X1,X2,P,[l l]) ;
-
     
-    h(:,h(1,:) == l) = NaN;
     
     if any(pose0~=0)
     h = rotation_matrix_2D(pose0(3))*h+pose0(1:2);

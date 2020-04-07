@@ -1,14 +1,14 @@
-function experiment_3_rover(index_list,save_flag,plot_flag)
+function experiment_3b_rover(index_list,save_flag,plot_flag)
 
 %% description
 % This script runs RTD for the rover with minimal sensor horizon and
 % realtime planning constraints
 %
 % NOTE, to run this script, you should be in the following directory:
-%   IJRR_bridging_the_gap/step_5_comparisons/experiment_3/rover_data
+%   IJRR_bridging_the_gap/step_5_comparisons/experiment_3/rover_data_b
 %
 % Author: Sean Vaskov
-% Created: 26 Mar 2020
+% Created: 3 Apr 2020
 %
 %% user parameters
 
@@ -39,7 +39,7 @@ plot_hlp = plot_flag ;
 allow_replan_errors = false;
 
 % file i/o
-summary_filename_header = 'rover_experiment_3_summary' ;
+summary_filename_header = 'rover_experiment_3b_summary' ;
 
 %% automated from here
 % create agent
@@ -53,7 +53,7 @@ P = rover_RTD_planner('FRS_directory',FRS_directory,'HLP',lane_HLP,'timeout',t_p
     'buffer',buffer_rtd,'lookahead_distance',lookahead_distance,'plot_FRS_flag',plot_frs_contour,'plot_HLP_flag',plot_hlp,'name','RTD','filtering_poly',reachable_set_poly);
 
 
-load('rover_simulation_worlds.mat')
+load('rover_simulation_worlds_3b.mat')
 
 %% run simulations
 for w_idx = index_list

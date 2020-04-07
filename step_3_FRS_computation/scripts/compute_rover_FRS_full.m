@@ -9,12 +9,12 @@
 clear ; clc ; close all ;
 %% user parameters
 % degree of SOS polynomial solution
-degree = 4 ; % this should be 4 or 6 unless you have like 100+ GB of RAM
+degree = 6 ; % this should be 4 or 6 unless you have like 100+ GB of RAM
 
 %error function file
-load('rover_xy_error_functions_T1.5_v0_1.0_to_2.0_degx3_degy3.mat')
+load('rover_xy_error_functions_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05_degx3_degy3.mat')
 %scaling function file
-load('rover_FRS_xy_scaling_T1.5_v0_1.0_to_2.0_24-Mar-2020.mat')
+load('rover_FRS_xy_scaling_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat')
 
 save_result = true;
 
@@ -114,10 +114,11 @@ w = FRS_polynomial;
 if save_result
     % create the filename for saving
     filename = ['rover_xy_FRS_full_T',num2str(T,'%0.1f'),'_deg',num2str(degree),...
-        '_v0_',num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),'_',date,'.mat'] ;
+        '_v0_',num2str(v0_min,'%0.1f'),'_to_',num2str(v0_max,'%0.1f'),...
+        '_delta0_',num2str(delta0_min,'%0.2f'),'_to_',num2str(delta0_max,'%0.2f'),'.mat'] ;
 
     % save output
     disp(['Saving FRS output to file: ',filename])
     save(filename,'FRS_polynomial*','FRS_lyapunov_function*','T','t_f','t','z','k',...
-        'diff*','f','g','w','lower_lim_*','upper_lim_*','degree','*max','*min','solver_input_problem','*scale','*offset')
+        'f','g','w','degree','*max','*min','solver_input_problem','*scale','*offset')
 end

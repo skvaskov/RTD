@@ -45,7 +45,7 @@ straight_std_dev_factor = 1/10;
 % simulation
 verbose_level = 2 ;
 max_sim_iterations = 120 ;
-max_sim_time = t_plan*max_sim_iterations*1.25 ;
+max_sim_time = t_plan*max_sim_iterations*5 ;
 plot_while_running = plot_flag ;
 
 % file i/o

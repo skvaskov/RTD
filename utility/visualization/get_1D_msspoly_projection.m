@@ -26,7 +26,7 @@ d = length(x);
     % create default inputs
     Offset = zeros(d,1) ;
     Scale = ones(d,1) ;
-
+ N = 100;
     % iterate through varargin to find Offset and Scale
     varargin_new = {} ;
     idx_new = 1 ;
@@ -36,6 +36,8 @@ d = length(x);
                 Offset = varargin{idx+1} ;
             case 'Scale'
                 Scale = varargin{idx+1} ;
+            case 'N'
+                N = varargin{idx+1} ;
             otherwise
                 varargin_new{idx_new} = varargin{idx} ;
                 varargin_new{idx_new+1} = varargin{idx+1} ;
@@ -47,7 +49,7 @@ d = length(x);
     % set up grid for plotting
     
     if d == 2
-        x_vec = linspace(-1,1,100) ;
+        x_vec = linspace(-1,1,N) ;
         
         [X1,X2] = meshgrid(x_vec,x_vec) ;
         X1 = X1(:)';
@@ -61,30 +63,44 @@ d = length(x);
         
         if ~isempty(Idx_in)
             % scale and shift for plotting
-            X1 = Scale(1)*(X1) + Offset(1) ;
-            X2 = Scale(2)*(X2) + Offset(2) ;
-            
+           
             if dproj == 1
-                projlims = [X1(Idx_in(1)),X1(Idx_in(end))];
+                X1 = Scale(1)*(X1) + Offset(1) ;
+                
+                
+                [~,I1] = min(X1(Idx_in));
+                [~,I2] = max(X1(Idx_in));
+                
+                
+                [X1,~,IC] = unique(X1);
+                I1 = IC(Idx_in(I1));
+                I2 = IC(Idx_in(I2));
+                
+                projlims(1) = X1(I1);
+                projlims(2) = X1(I2);
+                
             elseif dproj == 2
-                projlims = [X2(Idx_in(1)),X2(Idx_in(end))];
+                X2 = Scale(2)*(X2) + Offset(2) ;
+                
+                   [~,I1] = min(X2(Idx_in));
+                [~,I2] = max(X2(Idx_in));
+                
+                
+                   [X2,~,IC] = unique(X2);
+                
+
+                I1 = IC(Idx_in(I1));
+                I2 = IC(Idx_in(I2));
+                
+                projlims(1) = X2(I1);
+                projlims(2) = X2(I2);
+                
+                
             end
             
-%             if dplot == 1
-%                 ylims = get(gca,'ylim');
-%                 Xbox = make_box([diff(projlims),diff(ylims)])+[mean(projlims);0];
-%                 fill(Xbox(1,:),Xbox(2,:),FillColor,varargin_new{:})
-%             elseif dplot == 2
-%                 xlims = get(gca,'xlim');
-%                 Xbox = make_box([diff(xlims),diff(projlims)])+[0;mean(projlims)];
-%                 fill(Xbox(1,:),Xbox(2,:),FillColor,varargin_new{:})
-%                 
-%             end
         end
     else
         warning('not configured for dim other than 2 rn')
     end
-    
-    
-  
 end
+    
