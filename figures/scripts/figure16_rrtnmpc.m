@@ -1,20 +1,23 @@
 close all
 clear
 
-%trial 187 for success,xplotlimits = [5 25];yplotlimits = [-1 1];
-%trial 22 for failuer, xplotlimits = [-1 15];
-trial = 22;
+%trial 187 for success, xplotlimits = [3 23];yplotlimits = [-1 1]; textpos
+%[21.5,0.6]
+%trial 22 for failuer, xplotlimits = [-1 15];textpos = [13.5,0.6];
+trial = 187;
 load('rover_simulation_worlds.mat')
 load(['experiment_2/rover_data/rover_experiment_2_summary_world_',num2str(trial,'%04d'),'.mat'])
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
-xplotlimits = [-1 15];
+xplotlimits = [-1 19];
 yplotlimits = [-1 1];
 obs_size = 1;
 
-summary = summary(2);
-time_vector = summary.total_simulated_time(floor(linspace(1,length(summary.total_simulated_time),10)));
+summary = summary(3);
+planner_name = 'NMPC';
+textpos = [17,0.6];
+time_vector = linspace(0,10,10);
 W_all{trial}.plot;
 
 A = RoverAWD();
@@ -44,6 +47,8 @@ for t = time_vector
    
       
 end
+
+text(textpos(1),textpos(2),planner_name,'FontSize',12,'BackgroundColor','w')
 
 axis equal
   set(gca,'Layer','Top',...

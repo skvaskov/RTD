@@ -1,18 +1,18 @@
 close all
 clear
-%187 rtd sucess rrt crash, xplotlimits = [3 23];
-%22,  both fail xplotlimits = [-1 15];
+%187 rtd sucess rrt crash, xplotlimits = [3 23]; textpos [21,0.6]
+%22,  both fail xplotlimits = [-1 15]; textpos = [13.0,0.6];
 load('rover_simulation_worlds.mat')
-load('experiment_2/rover_experiment_2_summary_world_0022_with_info_for_RTD.mat')
+load('experiment_2/data_for_figures/rover_experiment_2_summary_world_0022_with_info_for_RTD.mat')
 
 W = W_all{22};
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
-xplotlimits = [3 23];
+xplotlimits = [-1 15];
 yplotlimits = [-1 1];
 obs_size = 1;
-
+textpos = [13.5,0.6];
 
 reachable_set_poly = [-0.3, 0.2,   1.75,  3.5,  3.5 ,  1.75, 0.2,-0.3,-0.3;...
                       -0.2,-0.3,-2,-2,2 , 2,0.3,0.2,-0.2];
@@ -90,6 +90,8 @@ for i = planning_indices
            
       
 end
+
+text(textpos(1),textpos(2),'RTD','FontSize',12,'BackgroundColor','w')
 
 axis equal
   set(gca,'Layer','Top',...

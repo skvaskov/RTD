@@ -2,7 +2,8 @@ clear
 close all
 load('rover_reconstructed_deg10_frsdeg8_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat')
 full_file = load('rover_xy_FRS_full_T1.5_deg6_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat');
-k_test = [0;-1;0.75];
+
+k_test = [0.5;-1;0.75]; %a [0.5;-1;0.75]
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
@@ -10,8 +11,8 @@ full_color = [0.25,0.5,0.25];
 
 N_traj_samples = 10;
 
-xplotlimits = [-0.75,3.0];
-yplotlimits = [-0.5,1.25];
+xplotlimits = [-0.75,3.75];
+yplotlimits = [-0.75,1.25];
 
 
 v_des = (v_des_max-v_des_min)/2*(k_test(3)+1)+v_des_min;

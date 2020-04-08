@@ -1,18 +1,24 @@
 clear
 close all
-load('rover_reconstructed_deg10_frsdeg8_T1.5_v0_1.5_to_2.2_delta0_-0.15_to_-0.05.mat')
+load('rover_reconstructed_deg10_frsdeg8_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat')
 
-k_test = [   -0.4172;  0.1718; 0.2405];
+k_test = [0.5; -1; 0.5];
 
-frs_color = [0,0.75,0.25];
-box_color = [0.25 0.5 0.25];
-x_color = [0 0.75 0.75];
-y_color = [0 0.75 0.5];
+frs_color = [0,   0.75,0.25];
+box_color = [0.25, 0.5, 0.25];
+x_color =   [0.1,  0.8,  0.5];
+y_color =   [0.1,  0.8, 0.7];
 ftprint_color = [0.8 0.8 1];
 
-xplotlimits = [-0.5,2.75];
-yplotlimits = [-0.5,1.25];
+xplotlimits = [-0.5,3.25];
+yplotlimits = [-0.5,1.0];
+textpos = [-0.3,0.9];
 
+tvec = [0 0.75 1.5];
+
+N = 250;
+
+%%
 
 v_des = (v_des_max-v_des_min)/2*(k_test(3)+1)+v_des_min;
 w0_des = (w0_des_max-w0_des_min)/2*(k_test(1)+1)+w0_des_min;
@@ -22,7 +28,7 @@ t_f = 2;
 
 [Tref,Uref,Zref] = make_rover_desired_trajectory(t_f,w0_des,psi_end,v_des);
 
-tvec = [0 0.75 1.5];
+
 
 
 A= RoverAWD();
@@ -41,9 +47,8 @@ for i = 1:3
     % make arrow for plot
     V_arrow = R_t*A.arrow_vertices + repmat(p_t,1,3) ;
     
-    
-    xlims = get_1D_msspoly_projection(msubs(-FRS_lyapunov_function_x,[t;k],[tplot/T;k_test]),z([1,3]),0,1,'Scale',zscale([1,3]),'Offset',-zoffset([1,3]));
-    ylims =  get_1D_msspoly_projection(msubs(-FRS_lyapunov_function_y,[t;k],[tplot/T;k_test]),z([2,3]),0,1,'Scale',zscale([2,3]),'Offset',-zoffset([2,3]));
+    xlims = get_1D_msspoly_projection(msubs(-FRS_lyapunov_function_x,[t;k],[tplot/T;k_test]),z([1,3]),0,1,'Scale',zscale([1,3]),'Offset',-zoffset([1,3]),'N',N);
+    ylims = get_1D_msspoly_projection(msubs(-FRS_lyapunov_function_y,[t;k],[tplot/T;k_test]),z([2,3]),0,1,'Scale',zscale([2,3]),'Offset',-zoffset([2,3]),'N',N);
 
     if tplot == 0 
        xlims(1) = min([xlims(1),A.footprint_vertices(1,:)]);
@@ -81,7 +86,12 @@ for i = 1:3
             plot(xbox(1,:),xbox(2,:),'--','Color',box_color,'LineWidth',1.5)
             
         end
-  
+        figure(i)
+            text(textpos(1),textpos(2),['time = ',num2str(tvec(i),'%0.2f'),' s'],'FontSize',12)
+            figure(4)
+            text(textpos(1),textpos(2),'composite','FontSize',12)
+
+
 end
 
 figure(4)
@@ -89,6 +99,7 @@ plot_2D_msspoly_contour(subs(w,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-
 
 for i = 1:4
     figure(i)
+    axis equal
     set(gca,'Layer','Top',...
       'Box',    'on',...
       'TickDir', 'in',...
@@ -101,7 +112,7 @@ for i = 1:4
       'Xtick',  linspace(xplotlimits(1),xplotlimits(2),5),...
        'Ytick',  linspace(yplotlimits(1),yplotlimits(2),5),...
       'Linewidth', 0.5 );
-  set(gca,'Fontsize',10);
+  set(gca,'Fontsize',12);
   set(gca,'fontname','Times New Roman')
   xlabel('x (m)')
  xlim(xplotlimits)

@@ -76,13 +76,18 @@ d = length(x);
                 I1 = IC(Idx_in(I1));
                 I2 = IC(Idx_in(I2));
                 
-                projlims(1) = X1(I1);
-                projlims(2) = X1(I2);
+            
+                    projlims(1) = X1(I1);    
+            
+                
+        
+                    projlims(2) = X1(I2);
+          
                 
             elseif dproj == 2
                 X2 = Scale(2)*(X2) + Offset(2) ;
                 
-                   [~,I1] = min(X2(Idx_in));
+                [~,I1] = min(X2(Idx_in));
                 [~,I2] = max(X2(Idx_in));
                 
                 
@@ -92,8 +97,13 @@ d = length(x);
                 I1 = IC(Idx_in(I1));
                 I2 = IC(Idx_in(I2));
                 
-                projlims(1) = X2(I1);
+           
+                projlims(1) = X2(I1);    
+               
+                
+             
                 projlims(2) = X2(I2);
+         
                 
                 
             end
