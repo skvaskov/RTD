@@ -3,7 +3,7 @@ close all
 load('rover_reconstructed_deg10_frsdeg8_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat')
 full_file = load('rover_xy_FRS_full_T1.5_deg6_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat');
 
-k_test = [0.5;-1;0.75]; %a [0.5;-1;0.75]
+k_test =   [0;-1;0.75]% a[0.5;-1;0.75];
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
@@ -81,6 +81,9 @@ end
 plot_2D_msspoly_contour(subs(w,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',frs_color,'LineWidth',1.5)
 plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',full_color,'LineWidth',1.5,'LineStyle','--')
     figure(1)
+
+ axis equal
+  
     set(gca,'Layer','Top',...
       'Box',    'on',...
       'TickDir', 'in',...
@@ -93,7 +96,7 @@ plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale'
       'Xtick',  linspace(xplotlimits(1),xplotlimits(2),5),...
        'Ytick',  linspace(yplotlimits(1),yplotlimits(2),5),...
       'Linewidth', 0.5 );
-  set(gca,'Fontsize',10);
+  set(gca,'Fontsize',12);
   set(gca,'fontname','Times New Roman')
   xlabel('x (m)')
  xlim(xplotlimits)
@@ -105,6 +108,5 @@ plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale'
   ax.XAxis.TickLabelFormat = '%.2f';
   
 
-  
  box on
 

@@ -2,7 +2,7 @@ clear
 close all
 load('rover_reconstructed_deg10_frsdeg8_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat')
 
-k_test = [0.5; -1; 0.5];
+k_test = [0.5; -1; 0];
 
 frs_color = [0,   0.75,0.25];
 box_color = [0.25, 0.5, 0.25];
@@ -10,7 +10,7 @@ x_color =   [0.1,  0.8,  0.5];
 y_color =   [0.1,  0.8, 0.7];
 ftprint_color = [0.8 0.8 1];
 
-xplotlimits = [-0.5,3.25];
+xplotlimits = [-0.5,2.75];
 yplotlimits = [-0.5,1.0];
 textpos = [-0.3,0.9];
 
@@ -88,13 +88,14 @@ for i = 1:3
         end
         figure(i)
             text(textpos(1),textpos(2),['time = ',num2str(tvec(i),'%0.2f'),' s'],'FontSize',12)
-            figure(4)
-            text(textpos(1),textpos(2),'composite','FontSize',12)
-
+           
 
 end
 
-figure(4)
+ figure(4)
+
+ text(textpos(1),textpos(2),'composite','FontSize',12)
+
 plot_2D_msspoly_contour(subs(w,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',frs_color,'LineWidth',1.5)
 
 for i = 1:4
