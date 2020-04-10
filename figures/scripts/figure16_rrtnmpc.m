@@ -10,21 +10,44 @@ load(['experiment_2/rover_data/rover_experiment_2_summary_world_',num2str(trial,
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
-xplotlimits = [-1 19];
+xplotlimits = [3 23];
 yplotlimits = [-1 1];
 obs_size = 1;
+obstacle_light_line_color = [1, 0.74,0.53];
 
-summary = summary(3);
-planner_name = 'NMPC';
+summary = summary(2);
+planner_name = 'RRT';
 textpos = [17,0.6];
 time_vector = linspace(0,10,10);
 W_all{trial}.plot;
 
 A = RoverAWD();
+max_heading = 0.6;
+buffer = 0;
 
+rotated_vertices = [cos(max_heading) -sin(max_heading);sin(max_heading) cos(max_heading)]*A.footprint_vertices;
+
+L = [min(rotated_vertices(1,:)),max(rotated_vertices(1,:))];
+W = [min(rotated_vertices(2,:)),max(rotated_vertices(2,:))];
+
+rotated_vertices = [cos(max_heading) -sin(max_heading);sin(max_heading) cos(max_heading)]'*A.footprint_vertices;
+
+L = [min([L(1),rotated_vertices(1,:)]),max([L(2),rotated_vertices(1,:)])];
+W = [min([W(1),rotated_vertices(2,:)]),max([W(2),rotated_vertices(2,:)])];
+
+obstacle_buffer = buffer*[-1,1;-1,1]+[L;W];
+
+buffer_stencil = [obstacle_buffer(1,[1 2 2 1 1]);...
+    obstacle_buffer(2,[1 1 2 2 1])];
+
+buffer_stencil = repmat([buffer_stencil,NaN(2,1)],[1 3]);
+
+O = [W_all{trial}.obstacles,NaN(2,1)]+buffer_stencil;
 
 plot(summary.trajectory(1,:),summary.trajectory(2,:),'b','LineWidth',1.0)
 plot(W_all{trial}.obstacles(1,:),W_all{trial}.obstacles(2,:),'r','LineWidth',obs_size)
+plot(O(1,:),O(2,:),'Color',obstacle_light_line_color,'LineWidth',obs_size)
+
 for t = time_vector
     
     z_act = interp1(summary.total_simulated_time',summary.trajectory',t)';

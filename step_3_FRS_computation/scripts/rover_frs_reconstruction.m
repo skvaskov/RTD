@@ -9,7 +9,7 @@
 clear ; clc ; close all ;
 %% user parameters
 % degree of SOS polynomial solution
-degree_reconstruction = 8; %this is the degree of the final (w) reachset
+degree_reconstruction = 10; %this is the degree of the final (w) reachset
 
 % load the error functions and distance scales
 load('rover_FRS_xy_scaling_T1.2_v0_0.0_to_0.8_delta0_-0.05_to_0.05.mat')
