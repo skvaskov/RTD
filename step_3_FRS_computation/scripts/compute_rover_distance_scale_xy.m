@@ -1,6 +1,6 @@
 %% description
 % This script computes the distance scaling needed to compute an FRS for
-% the Rover FRS.
+% the Rover
 %
 % Author: Sean Vaskov
 % Created: 06 March 2020

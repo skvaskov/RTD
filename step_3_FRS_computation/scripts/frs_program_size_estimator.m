@@ -9,13 +9,13 @@
 % Created: 08 April 2020
 
 % user parameters
-n = 6; %system dimension (time, states, parameters)
-l = 4; %relaxation degree (w,v,q will be degree 2*l)
-dynamics_degree = 5; %max degree of dynamics, f
-g_degree = [3,3]; %degree of g functions
+n = 5; %system dimension (time, states, parameters)
+l = 5; %relaxation degree (w,v,q will be degree 2*l)
+dynamics_degree = 2; %max degree of dynamics, f
+g_degree = [4,3]; %degree of g functions
 semialg_degree = 2; %degree of semi algedbriac sets definining domain (typically 2 for rectangular domains)
-w_dimension = n-2; %number of states in w, typically n-1
-footprint_is_circle = false; %if the footprint is a circle, assume we have 1 semi algebraic set for x and y in HZ0
+w_dimension = n-1; %number of states in w, typically n-1
+footprint_is_circle = true; %if the footprint is a circle, assume we have 1 semi algebraic set for x and y in HZ0
 
 %% automated from here
 num_g = length(g_degree);

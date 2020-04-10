@@ -1,5 +1,27 @@
 
 function p = fit_bounding_polynomial_from_samples(p_data,x_data,x,degree,bound)
+% Output: a polynomial function p(x) of degree degree that is the solution
+% of the following optimization program (for bound = 'upper')
+
+% p = argmin integral_hX p(x) dx
+%        p
+%          s.t. p(x_data)-x_data >= 0 for all x_data
+%               p(x) > min(x_data) on hX
+%        
+%      where Hx = {x | (x-min(x_data)).*(max(x_data)-x)>=0}
+
+% entering bound = 'lower', makes p a lower bound instead
+% 
+% note that the functions produced by this script are only garaunteed to
+% bound the provided data. In practice if degree is low, this works for
+% points in hX, but this is not garaunteed.
+% 
+% Author: Sean Vaskov
+% Created: 8 Mar 2020
+% Updated: -
+
+
+
 if nargin < 5
     bound = 'upper';
 end

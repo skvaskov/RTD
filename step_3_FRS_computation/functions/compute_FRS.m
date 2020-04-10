@@ -33,7 +33,7 @@ function out = compute_FRS(prob)
 %   g           tracking error dynamics (n x 1 msspoly in t, z, and k)
 %   hT          1 x 1 msspoly that defines the time horizon T
 %   FRS_states  states for w function (usually [z;k])
-%   hFRS_states semilg sets for w function (usually [hZ;hk])
+%   hFRS_states vector of msspoly that are positive for domain of w function (usually [hZ;hk])
 
 % Authors: Shreyas Kousik and Sean Vaskov
 % Created: 12 Apr 2019
@@ -72,12 +72,6 @@ function out = compute_FRS(prob)
         hFRS_states = prob.hFRS_states ;
     else
         hFRS_states = [hZ ;hK];
-    end
-    
-    if isfield(prob,'hBody')
-        hBody = prob.hBody ;
-    else
-        hBody = [];
     end
 
     % tracking error function g (default is to not have g, so we don't need
@@ -147,7 +141,7 @@ function out = compute_FRS(prob)
     end
 
     % v(t,.) + w > 1 on T x Z x K
-    prog = sosOnK(prog, v + w - 1, unique([t;z;FRS_states;k]), unique([hT;hBody; hFRS_states; hZ; hK]), degree) ;
+    prog = sosOnK(prog, v + w - 1, unique([t;z;FRS_states;k]), unique([hT;hFRS_states; hZ; hK]), degree) ;
 
     % w > 0 on hFRS states
     prog = sosOnK(prog, w, FRS_states, hFRS_states, degree) ;

@@ -1,16 +1,16 @@
 function q = msspoly_to_fun(p,x)
 
-% this function takes in an msspoly and returns it as a matlab function
-% handle
-% type
+% this function takes in an msspoly, p(x) and returns it as a matlab
+% function handle, q
 
 %inputs
 %p: n by k msspoly
 %x: cell array of msspolys this will be passed as an argument into matlabFunction
+% for example if you want q:TxZxK->R, input x = {t,z,k}
 
-% msspoly_chars = ['@','#','_','.','a','b','c','d','e','f','g','h','i','j',...
-%     'k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z'];
-
+%Author: Sean Vaskov
+%Created: 2019
+%%
 xsym_fun = cell(1,length(x));
 
 for i = 1:length(x)

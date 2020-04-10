@@ -1,6 +1,27 @@
 function  mirror_rover_frs(file_name)
-%MIRROR_ROVER_FRS_ABOUT_HEADING Summary of this function goes here
-%   Detailed explanation goes here
+%what this function does
+%takes an FRS for the rover model defined for k_2 in [0,0.5], and "mirrors"
+%it to produce an frs for k_2 in [-0.5,0]. 
+
+%this is done by negating the y,k_1,and k_2 variables in w_r, and negating
+%the initial condition ranges for the wheelangle and heading
+
+%The mirroring operations relies on the model for
+%the rover being symetric, and can be done to reduce the amount of FRS
+%computations. Time permitting the user should just compute all needed
+%FRS's
+
+%output
+%saves a new file with the mirrored FRS
+
+%input 
+%file name with a current FRS
+
+%Authors: Sean Vaskov
+%Created: 3/25/20
+
+%%
+
 load(file_name)
 
 w0_temp = -[w0_des_max,w0_des_min];

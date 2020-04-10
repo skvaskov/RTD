@@ -364,7 +364,7 @@ classdef rover_RTD_planner < generic_RTD_planner
                     
                     wx = subs(F.w,k,[k_opt(1);psiend_k2;k_opt(2)]);
                     
-                    h = get_2D_msspoly_contour(wx,z,1,'Scale',F.zscale(1:2),'Offset',-F.zoffset(1:2),'pose',pose0);
+                    h = get_2D_contour_points(wx,z,1,'Scale',F.zscale(1:2),'Offset',F.zoffset(1:2),'Pose',pose0);
                     
                     
                     if ~check_if_plot_is_available(P,'FRS_contour')

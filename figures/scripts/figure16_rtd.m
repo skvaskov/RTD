@@ -80,7 +80,7 @@ for i = planning_indices
                outside_pts = rotation_matrix_2D(z_act(3))* (repmat(zscale(1:2),[1 sum(L)]).*P.current_obstacles_in_FRS_coords(:,L)-zoffset(1:2))+z_act(1:2);
                
                 
-               h = get_2D_msspoly_contour(wx,z(1:2),1,'Scale',zscale(1:2),'Offset',[-zoffset(1);-zoffset(2)],'pose',z_act(1:3),'N',100);
+               h = get_2D_contour_points(wx,z(1:2),1,'Scale',zscale(1:2),'Offset',[zoffset(1);zoffset(2)],'Pose',z_act(1:3),'N',100);
                 plot(h(1,:),h(2,:),'Color',frs_color,'LineWidth',1.0)
         
                

@@ -1,14 +1,23 @@
 function projlims=  get_1D_msspoly_projection(p,x,l,dproj,varargin)
-% plot_2D_msspoly_contour(p,x,l,'property1',value1,'property2',value2,...)
+% get_1D_msspoly_projection(p,x,l,dproj,'property1',value1,'property2',value2,...)
 %
 % Given an msspoly p in the 2D variable x, plot its l-level set. If l is
-% not provided, then l = 0 is used as the default. After the 3 default
+% not provided, then l = 0 is used as the default.
+
+%the function will find the lower and upper limits of {x_dproj | p(x) > 1}
+%by evaluating p on a uniform mesh grid.
+%it is currently set up to handle dimension(x) = 2
+
+%After the 4 default
 % inputs, this function takes in the regular property/value pairs of the
 % MATLAB default contour function. In addition, you can provide the
 % following properties:
-%   Offset     a 2-by-1 vector (x,y) to shift the origin to
-%   Scale      a scalar value to scale the size of the plot by
-%   FillColor  a color in usual matlab plotting syntax to fill the contour
+%   Offset     a 2-by-1 vector (x,y) to shift the origin to (default 0)
+%   Scale      a scalar value to scale the size of the plot by (default 1)
+%   N          number of points in each dimension to sample p at (default 100)
+
+% Author: Sean Vaskov
+% Created: 10 March 2020
     
 %% parse inputs
 projlims = NaN;
@@ -26,7 +35,7 @@ d = length(x);
     % create default inputs
     Offset = zeros(d,1) ;
     Scale = ones(d,1) ;
- N = 100;
+    N = 100;
     % iterate through varargin to find Offset and Scale
     varargin_new = {} ;
     idx_new = 1 ;
@@ -110,7 +119,7 @@ d = length(x);
             
         end
     else
-        warning('not configured for dim other than 2 rn')
+        warning('not configured for dim other than 2 right now')
     end
 end
     

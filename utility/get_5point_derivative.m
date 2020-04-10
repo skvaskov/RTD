@@ -1,4 +1,18 @@
-function [v] = get_5point_derivative(x,t)
+function v = get_5point_derivative(x,t)
+%returns the numerical derivative of data x, with corresponding time vector
+% t
+%uses a 5 point finite difference formula in the interior points, and
+%forward and backward different operators on the left and right edges
+
+%input: x = dxN data
+%       t = 1xN time 
+
+%output: v = dxN vector of the numerical derivatives
+
+%Author: Sean Vaskov
+%Created: Oct 2018
+
+%%
 N=length(t);
 v=NaN(size(x,1),N);
 

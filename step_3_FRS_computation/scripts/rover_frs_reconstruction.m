@@ -1,7 +1,7 @@
 %% description
-% This script executed the reconstruction progmram (XX) Ffor the Rover. The
-% user specifies the range of initial speeds; all other info is loaded from
-% the relevant .mat files.
+% This script executed the reconstruction progmram (R^alpha) for the Rover.
+% The user specifies .mat files containing scaling and the reach sets for
+% the x and y subystems
 %
 % Author: Sean Vaskov
 % Created: 10 March 2020

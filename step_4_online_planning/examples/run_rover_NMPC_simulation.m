@@ -2,7 +2,7 @@ clear
 close all
 %% description
 % This script runs a simulation with the Rover in the simulator
-% framework, using RTD to plan online.
+% framework, using NMPC to plan online.
 %
 % Author: Sean Vaskov
 % Created: 12 March 2020

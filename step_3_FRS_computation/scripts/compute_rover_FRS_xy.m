@@ -1,8 +1,8 @@
 %% description
-% This script computes a Forward-Reachable Set (FRS) for the Rover. The
-% user specifies the range of initial speeds; all other info is loaded from
-% the relevant .mat files.
-%
+% This script computes a Forward-Reachable Sets (FRS) for x and y subsystems of the Rover.
+% By solving (D_i^l) for i = {1,2} 
+% the user provides .mat files to load relevant info
+
 % Author: Sean Vaskov
 % Created: 17 March 2020
 %

@@ -1,4 +1,14 @@
+
+
 function [z_scale,z_offset,Zsim,Tsim] = get_state_scaling_factors(f_fun,Z0_range,varargin)
+%what this function does
+%gives scaling factors for space such that|(z(t)+z_offset)/z_scale|<n_scale
+%where z(t) = int_0^t dynamics_fun(t,z,k) dt, and t is in [0,T], and z(0)
+%and k are sampled from Z0_range and K_range
+
+%output (if not t_box_times given)
+%z_offset: n_z x 1 double satisfying the above inequality
+%z_scale: n_z x 1double satisfying the above inequality
 
 %input 
 %dynamics_fun: function handle (t,z,k) that returns the systems dynamics
@@ -18,15 +28,6 @@ footprint = []; %2xnfp points along vehicle rigid body you want to include
 pose_indexs = [1;2;3];
 K_range = [];
 
-%what this function does
-%gives scaling factors for space such that|(z(t)+z_offset)/z_scale|<n_scale
-%where z(t) = int_0^t dynamics_fun(t,z,k) dt, and t is in [0,T], and z(0)
-%and k are sampled from Z0_range and K_range
-
-%output (if not t_box_times given)
-%z_offset: n_z x 1 double satisfying the above inequality
-%z_scale: n_z x 1double satisfying the above inequality
-
 %output (if t_box_times given)
 %z_offset(:,1): n_z x 1 double satisfying the above inequality for all t
 %z_scale(:,1): n_z x 1double satisfying the above inequality for all t
@@ -34,6 +35,13 @@ K_range = [];
 %t_box_times(i)
 %z_scale(:,i+1): n_z x 1double satisfying the above inequality for t =
 %t_box_times(i)
+
+% Authors: Sean Vaskov
+% Created: 2019
+% Updated: 8 Mar 2020
+
+
+%%
 
 for idx = 1:2:length(varargin)
     switch varargin{idx}

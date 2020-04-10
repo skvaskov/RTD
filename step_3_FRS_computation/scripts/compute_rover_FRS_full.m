@@ -1,7 +1,7 @@
 %% description
-% This script computes a Forward-Reachable Set (FRS) for the Rover. The
-% user specifies the range of initial speeds; all other info is loaded from
-% the relevant .mat files.
+% This script computes a Forward-Reachable Set (FRS) for the Rover 
+% by solving program (D^l) 
+% The user specifies the .mat file to load relevant data
 %
 % Author: Sean Vaskov
 % Created: 24 March 2020
@@ -9,7 +9,7 @@
 clear ; clc ; close all ;
 %% user parameters
 % degree of SOS polynomial solution
-degree = 6 ; % this should be 4 or 6 unless you have like 100+ GB of RAM
+degree = 6 ; 
 
 %error function file
 load('rover_xy_error_functions_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05_degx3_degy3.mat')

@@ -14,8 +14,8 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
 %   Pose            a 3-by-1 in SE(2) where the contour should be centered
 %                   at and rotated by
 %
-%   Scale           a scalar representing how much 2D space is scaled in
-%                   the frame used for computing p
+%   Scale           a 2-by-1 scalar representing how much 2D space is scaled in
+%                   the x and y dimensions for computing p
 %
 %   Bounds          [xlo,xhi,ylo,yhi] lower and upper bounds of the space
 %                   containing the contour (for now, these bounds are
@@ -25,10 +25,12 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
 %   GridDensity     the number of points in x and y to use for computing
 %                   the contour (default is 100)
 %
+%   Scale, Offset, and Pose satisfy the following equality
+%    x_global = rotation_matrix_2D(Pose(3))* [Scale.*x-Offset] + Pose(1:2)
 %
 % Authors: Shreyas Kousik and Sean Vaskov
 % Created: 29 May 2019
-% Updated: 29 Oct 2019
+% Updated: 09 Apr 2020
 %
     %% parse input arguments
     if nargin < 3
@@ -38,7 +40,7 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
     % create default inputs
     Offset = [0;0] ;
     Pose = [0;0;0] ;
-    Scale = 1 ;
+    Scale = [1 ; 1] ;
     Bounds = [-1, 1, -1, 1] ;
     GridDensity = 100 ;
 
@@ -59,7 +61,9 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
                 GridDensity = varargin{idx+1} ;
         end
     end
-
+    if numel(Scale) == 1
+        Scale = [Scale;Scale];
+    end
     %% create contour points
     % make 2D grid for plotting
     x_vec = linspace(Bounds(1),Bounds(2),GridDensity) ;
@@ -116,8 +120,8 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
         x0 = Offset(1) ;
         y0 = Offset(2) ;
         
-        x_shift = (Scale*Px - x0)*cos(Rotation) - sin(Rotation)*(Scale*Py - y0) ;
-        y_shift = (Scale*Py - y0)*cos(Rotation) + sin(Rotation)*(Scale*Px - x0) ;
+        x_shift = (Scale(1)*Px - x0)*cos(Rotation) - sin(Rotation)*(Scale(1)*Py - y0) ;
+        y_shift = (Scale(2)*Py - y0)*cos(Rotation) + sin(Rotation)*(Scale(2)*Px - x0) ;
         
         % create the final output
         P = Position + [x_shift ; y_shift];

@@ -158,6 +158,9 @@ x_data = x_data(:)';
 y_data = y_data(:)';
 psi_data = psi_data(:)';
 
+plot(reachable_set_poly(1,:),reachable_set_poly(2,:), 'LineWidth',1.0,'Color',[0 0.8, 0.2])
+hold on
+
 plot(x_data,y_data,'b.');
 
 R = rotation_matrix_2D(psi_data);
@@ -172,13 +175,17 @@ V2 = reshape(R*(V2(:)),[2 length(x_data)]);
 V3 = reshape(R*(V3(:)),[2 length(x_data)]);
 V4 = reshape(R*(V4(:)),[2 length(x_data)]);
 
-hold on
+
 plot(x_data+V1(1,:),y_data+V1(2,:),'b.')
 plot(x_data+V2(1,:),y_data+V2(2,:),'b.')
 plot(x_data+V3(1,:),y_data+V3(2,:),'b.')
 plot(x_data+V4(1,:),y_data+V4(2,:),'b.')
 
-plot(reachable_set_poly(1,:),reachable_set_poly(2,:), 'LineWidth',1.0,'Color',[0 0.8, 0.2])
+
+legend({'polygon','data'})
+
+xlabel('x (m)')
+ylabel('y (m)')
 
 
 

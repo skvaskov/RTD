@@ -2,7 +2,8 @@ clear;close all
 
 %% description
 %
-% Create and plot an example desired and braking trajectory for the rover.
+% Create and plot an example desired and braking trajectory for the rover
+% and have the agent track it from a specified initial condition
 %
 % Author: Sean Vaskov
 % Created: 06 March 2020
