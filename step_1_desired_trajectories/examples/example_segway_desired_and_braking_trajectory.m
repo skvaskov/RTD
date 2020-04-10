@@ -1,5 +1,4 @@
 %% description
-%
 % Create and plot an example desired and braking trajectory for the segway
 %
 % Author: Shreyas Kousik
