@@ -1,22 +1,30 @@
-close all
-clear
-%187 rtd sucess rrt crash, xplotlimits = [3 23]; textpos [21,0.6]
-%22,  both fail xplotlimits = [-1 15]; textpos = [13.0,0.6];
-load('rover_simulation_worlds.mat')
-load('experiment_2/data_for_figures/rover_experiment_2_summary_world_0022_with_info_for_RTD.mat')
+%% description
+% This script generates Fig. 16 in the paper, for the RTD planner 
+%
+% Author: Sean Vaskov
+% Created: 10 Apr 2020
 
-W = W_all{22};
+%% user parameters
+save_pdf_flag = true ;
+trial = 187; %% 22 for planners stop (b), 187 for trial where RRT crashes (a)
+xplotlimits = [3 23]; %[-1 15] for trial 22, [3 23] for trial 187
+
+%%
+
+load('rover_simulation_worlds.mat')
+load(['experiment_2/data_for_figures/rover_experiment_2_summary_world_',num2str(trial,'%04d'),'_with_info_for_RTD.mat'])
+
+close all
+fh = figure;
+
+W = W_all{trial};
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
-xplotlimits = [-1 15];
 yplotlimits = [-1 1];
 obs_size = 1;
-textpos = [13.5,0.6];
 
-reachable_set_poly = [-0.3, 0.2,   1.75,  3.5,  3.5 ,  1.75, 0.2,-0.3,-0.3;...
-                      -0.2,-0.3,-2,-2,2 , 2,0.3,0.2,-0.2];
-
+W.bounds_as_polyline = NaN(2,5);
 W.plot;
 
 A = RoverAWD();
@@ -90,32 +98,38 @@ for i = planning_indices
            
       
 end
-
-text(textpos(1),textpos(2),'RTD','FontSize',12,'BackgroundColor','w')
+textpos = [xplotlimits(2)-0.2,1];
+text(textpos(1),textpos(2),'RTD', 'EdgeColor','none','Margin',1,...
+  'HorizontalAlignment', 'right','VerticalAlignment','top','FontSize',14,'BackgroundColor','w')
 
 axis equal
   set(gca,'Layer','Top',...
       'Box',    'on',...
       'TickDir', 'in',...
-      'Ticklength', [0.005 0.005],...
       'Xminortick', 'off',...
       'Yminortick', 'off',...
       'YGrid',  'off',...
       'XColor', [0 0 0],...
       'Ycolor', [0 0 0],...
       'Xtick',  linspace(xplotlimits(1),xplotlimits(2),5),...
-       'Ytick',  linspace(yplotlimits(1),yplotlimits(2),5),...
-      'Linewidth', 0.5 );
-  set(gca,'Fontsize',10);
+       'Ytick',  linspace(yplotlimits(1),yplotlimits(2),3),...
+      'Linewidth', 1.0 );
+  set(gca,'Fontsize',15);
   set(gca,'fontname','Times New Roman')
-  xlabel('x (m)')
+  xlabel('x [m]')
  xlim(xplotlimits)
  ylim(yplotlimits)
-  ylabel('y (m)')
+  ylabel('y [m]')
   
-  ax = gca;
-  ax.YAxis.TickLabelFormat = '%.1f';
-  ax.XAxis.TickLabelFormat = '%.0f';
-
+  set_plot_linewidths(1.25)
    
+  ax = gca;
+  ax.YAxis.TickLabelFormat = '%.0f';
+  ax.XAxis.TickLabelFormat = '%.0f';
+   
+
+ 
+if save_pdf_flag
+    save_figure_to_pdf(fh,['figure16_RTD_trial_',num2str(trial),'.pdf'])
+end
 

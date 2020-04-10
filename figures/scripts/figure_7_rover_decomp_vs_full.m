@@ -1,9 +1,39 @@
-clear
-close all
-load('rover_reconstructed_deg10_frsdeg8_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat')
-full_file = load('rover_xy_FRS_full_T1.5_deg6_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat');
 
-k_test =   [0;-1;0.75]% a[0.5;-1;0.75];
+%% description
+% This script generates Fig. 7 in the paper, which compares FRS computed
+% with program in Section 3 (D), and the decomposition method in Section 4 (R)
+%
+% Author: Sean Vaskov
+% Created: 10 Apr 2020
+
+%% user parameters
+save_pdf_flag = true;
+sub_figure = 'b';
+
+%% figure parameters
+decomp_reach_set = 'rover_reconstructed_deg10_frsdeg8_T1.5_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat';
+full_reach_set = 'rover_xy_FRS_full_T1.5_deg6_v0_0.8_to_1.5_delta0_-0.05_to_0.05.mat';
+
+if strcmpi(sub_figure,'b')
+k_test =   [0;-1;0.75];
+xplotlimits = [-0.75,3.75];
+yplotlimits = [-0.75,1.0];
+else
+k_test = [0.5;-1;0.75]; 
+xplotlimits = [-0.75,3.75];
+yplotlimits = [-0.75,1.25];
+end
+
+
+%%
+
+close all
+
+fh = figure
+load(decomp_reach_set)
+full_file = load(full_reach_set);
+
+
 
 frs_color = [0,0.75,0.25];
 ftprint_color = [0.8 0.8 1];
@@ -11,13 +41,12 @@ full_color = [0.25,0.5,0.25];
 
 N_traj_samples = 10;
 
-xplotlimits = [-0.75,3.75];
-yplotlimits = [-0.75,1.25];
 
 
-v_des = (v_des_max-v_des_min)/2*(k_test(3)+1)+v_des_min;
-w0_des = (w0_des_max-w0_des_min)/2*(k_test(1)+1)+w0_des_min;
-psi_end = (psi_end_max-psi_end_min)/2*(k_test(2)+1) + psi_end_min;
+
+v_des = (v_des_max-v_des_min)/2*(k_test(3)+1)+v_des_min
+w0_des = (w0_des_max-w0_des_min)/2*(k_test(1)+1)+w0_des_min
+psi_end = (psi_end_max-psi_end_min)/2*(k_test(2)+1) + psi_end_min
 
 t_f = 2;
 
@@ -66,28 +95,27 @@ for i = 1:N_traj_samples
             fill(V_fp(1,:),V_fp(2,:),ftprint_color,...
                 'EdgeColor',A.plot_footprint_edge_color,...
                 'FaceAlpha',1,...
-                'EdgeAlpha',A.plot_footprint_edge_opacity) ;
+                'EdgeAlpha',A.plot_footprint_edge_opacity,'LineWidth',1.5) ;
             
             % plot arrow on footprint
             fill(V_arrow(1,:),V_arrow(2,:),A.plot_arrow_color,...
                 'EdgeColor',A.plot_arrow_color,...
                 'FaceAlpha',1,...
-                'EdgeAlpha',A.plot_arrow_opacity) ;
+                'EdgeAlpha',A.plot_arrow_opacity,'LineWidth',1.5) ;
             
         end
   
 end
 
-plot_2D_msspoly_contour(subs(w,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',frs_color,'LineWidth',1.5)
-plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',full_color,'LineWidth',1.5,'LineStyle','--')
-    figure(1)
+plot_2D_msspoly_contour(subs(w,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',frs_color,'LineWidth',2.0)
+plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale',zscale(1:2),'Offset',-zoffset(1:2),'Color',full_color,'LineWidth',2.0,'LineStyle','--')
+
 
  axis equal
   
     set(gca,'Layer','Top',...
       'Box',    'on',...
       'TickDir', 'in',...
-      'Ticklength', [0.005 0.005],...
       'Xminortick', 'off',...
       'Yminortick', 'off',...
       'YGrid',  'off',...
@@ -95,18 +123,20 @@ plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale'
       'Ycolor', [0 0 0],...
       'Xtick',  linspace(xplotlimits(1),xplotlimits(2),5),...
        'Ytick',  linspace(yplotlimits(1),yplotlimits(2),5),...
-      'Linewidth', 0.5 );
-  set(gca,'Fontsize',12);
+      'Linewidth', 1.0 );
+  set(gca,'Fontsize',15);
   set(gca,'fontname','Times New Roman')
-  xlabel('x (m)')
+  xlabel('x [m]')
  xlim(xplotlimits)
  ylim(yplotlimits)
-  ylabel('y (m)')
+  ylabel('y [m]')
   
   ax = gca;
   ax.YAxis.TickLabelFormat = '%.2f';
   ax.XAxis.TickLabelFormat = '%.2f';
   
 
- box on
+ if save_pdf_flag
+     save_figure_to_pdf(fh',['figure7_rover_recon_vs_full_',sub_figure,'.pdf'])
+ end
 
