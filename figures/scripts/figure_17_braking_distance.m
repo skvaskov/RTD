@@ -6,12 +6,13 @@
 % Created: 10 Apr 2020
 
 %% user parameters
-save_pdf_flag = true ;
+save_pdf_flag = false ;
 robot = 'segway'; %set to 'rover' or 'segway'
 v0_range = [0 1.5]; 
 N_sample = 10;
 ymax = 0.4; %upper limit on y axis (leave empty and it will set to max(braking distance)
 T = 2; %time horizon (make large to ensure braking to stop)
+
 %%
 close all
 fh = figure;
