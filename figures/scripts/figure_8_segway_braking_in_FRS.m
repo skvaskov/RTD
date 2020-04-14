@@ -6,7 +6,7 @@
 % Created: 9 Apr 2020
 %
 %% user parameters
-save_pdf_flag = false ;
+save_pdf_flag = true ;
 
 %% automated from here
 % initial condition
@@ -77,6 +77,7 @@ ylabel('y [m]')
 axis([-0.5 2 -0.5 1])
 xticks(-1:0.5:2)
 yticks(-0.5:0.5:1.5)
+box on
 
 set_plot_linewidths(2)
 set(gca,'FontSize',15)
