@@ -124,5 +124,5 @@ axis equal
  set_plot_linewidths(1.25)
  
 if save_pdf_flag
-    save_figure_to_pdf(fh,['figure16_',planner_name,'_trial_',num2str(trial),'.pdf'])
+    save_figure_to_pdf(fh,[planner_name,'_rover_trial_',num2str(trial),'.pdf'])
 end

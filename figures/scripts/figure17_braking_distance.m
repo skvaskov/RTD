@@ -117,5 +117,5 @@ end
   ax.XAxis.TickLabelFormat = '%.2f';
 
 if save_pdf_flag
-    save_figure_to_pdf(fh,['figure17_',robot,'_braking_distance.pdf'])
+    save_figure_to_pdf(fh,[robot,'_braking_distance.pdf'])
 end

@@ -96,7 +96,9 @@ function out = compute_FRS(prob)
     prog = spotsosprog;
     prog = prog.withIndeterminate(t) ;
     prog = prog.withIndeterminate(z) ;
-    prog = prog.withIndeterminate(k) ;
+    if ~isempty(k)
+        prog = prog.withIndeterminate(k) ;
+    end
     if ~isempty(x)
         prog = prog.withIndeterminate(x);
     end

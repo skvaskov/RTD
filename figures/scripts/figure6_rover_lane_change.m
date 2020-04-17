@@ -109,5 +109,5 @@ axis equal
   ax.XAxis.TickLabelFormat = '%.0f';
   
   if save_pdf_flag
-    save_figure_to_pdf(fh,['figure5_lanechange_',sub_figure,'.pdf'])
+    save_figure_to_pdf(fh,['lanechange_',sub_figure,'.pdf'])
 end
