@@ -137,6 +137,6 @@ plot_2D_msspoly_contour(subs(full_file.FRS_polynomial,k,k_test),z(1:2),1,'Scale'
   
 
  if save_pdf_flag
-     save_figure_to_pdf(fh',['figure7_rover_recon_vs_full_',sub_figure,'.pdf'])
+     save_figure_to_pdf(fh',['rover_recon_vs_full_',sub_figure,'.pdf'])
  end
 

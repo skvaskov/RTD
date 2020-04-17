@@ -145,10 +145,10 @@ for i = 1:4
 end
 
 if save_pdf_flag
-    save_figure_to_pdf(fh{1},'figure6_decomp_a.pdf')
-    save_figure_to_pdf(fh{2},'figure6_decomp_b.pdf')
-    save_figure_to_pdf(fh{3},'figure6_decomp_c.pdf')
-    save_figure_to_pdf(fh{4},'figure6_decomp_d.pdf')
+    save_figure_to_pdf(fh{1},'decomp_a.pdf')
+    save_figure_to_pdf(fh{2},'decomp_b.pdf')
+    save_figure_to_pdf(fh{3},'decomp_c.pdf')
+    save_figure_to_pdf(fh{4},'decomp_d.pdf')
     
 end
     

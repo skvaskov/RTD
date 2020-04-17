@@ -130,6 +130,6 @@ axis equal
 
  
 if save_pdf_flag
-    save_figure_to_pdf(fh,['figure16_RTD_trial_',num2str(trial),'.pdf'])
+    save_figure_to_pdf(fh,['RTD_rover_trial_',num2str(trial),'.pdf'])
 end
 
