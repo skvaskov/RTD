@@ -187,8 +187,8 @@ classdef segway_generic_planner < planner
             hold_check = hold_switch() ;
             
             % plot trajectory plan
-            Z = P.current_plan.Z ;
-            if ~isempty(Z)
+            if ~isempty(P.current_plan) && ~isempty(P.current_plan.Z)
+                Z = P.current_plan.Z ;
                 if check_if_plot_is_available(P,'trajectory')
                     P.plot_data.trajectory.XData = Z(1,:) ;
                     P.plot_data.trajectory.XYData = Z(2,:) ;

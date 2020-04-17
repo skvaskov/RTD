@@ -91,5 +91,5 @@ disp('--------------------------------------------------------------------')
 disp(' ')
 
 % set output args
-varargout = {goal_result, collision_result, planner_names,} ;
+varargout = {goal_result, collision_result, planner_names, goals, collisions} ;
 varargout = varargout(1:nargout) ;
