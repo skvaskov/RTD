@@ -4,7 +4,7 @@ This repository contains code for the paper, ["Bridging the Gap Between Safety a
 
 Check out the [repo](https://github.com/ramvasudevan/RTD) and [tutorial](https://github.com/skousik/RTD_tutorial) to better understand the method. This repository follows the tutorial, but for the Segway and Rover instead of for the Turtlebot.
 
-<img src="figures/segway_time_lapse.jpg" alt="segway_time_lapse" style="zoom:20%;" />
+<img src="figures/segway_time_lapse.jpg" alt="segway_time_lapse" style="zoom:15%;" />
 
 
 
