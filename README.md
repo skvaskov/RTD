@@ -2,7 +2,7 @@
 
 This repository contains code for the paper, ["Bridging the Gap Between Safety and Real-Time Performance in Receding-Horizon Trajectory Design for Mobile Robots"](https://arxiv.org/abs/1809.06746), which introduces **Reachability-based Trajectory Design**, or RTD.
 
-Check out the [repo](https://github.com/ramvasudevan/RTD) and [tutorial](https://github.com/skousik/RTD_tutorial) to better understand the method. This repository follows the tutorial, but for the Segway and Rover instead of for the Turtlebot.
+Check out the [tutorial](https://github.com/skousik/RTD_tutorial) to get a gentler introduction to the method. This repository follows the tutorial, but for the Segway and Rover instead of for the Turtlebot.
 
 <img src="figures/segway_time_lapse.jpg" alt="segway_time_lapse" width="600" />
 
