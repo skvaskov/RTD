@@ -86,47 +86,52 @@ classdef generic_RTD_planner < planner
                 reload_FRS_files = true ;
             end
             
-            if reload_FRS_files || isempty(P.FRS)
-                P.vdisp('Loading FRS files',1)
-                
-                t_load = tic ;
-                
-                % make sure directory has a slash at the end
-                if ~strcmp(P.FRS_directory(end),'/')
-                    P.FRS_directory = [P.FRS_directory, '/'] ;
-                end
-                
-                % get all files in the FRS directory
-                files = dir(P.FRS_directory) ;
-                
-                % set up structure to store FRSes
-                N_files = length(files) ;
-                FRS_data = cell(1,N_files) ;
-                
-                % iterate through files and load each .mat file
-                for idx = 1:N_files
-                    current_filename = files(idx).name ;
-                    current_filepath = [P.FRS_directory,current_filename] ;
+            if ~isfolder(P.FRS_directory)
+                error(['The provided FRS directory is not valid! Please check ',...
+                    'your RTD planner''s FRS_directory property']) ;
+            else
+                if reload_FRS_files || isempty(P.FRS)
+                    P.vdisp('Loading FRS files',1)
                     
-                    if ~strcmp(current_filename(1),'.') && ...
-                            strcmp(current_filename(end-3:end),'.mat')
-                        if nargin > 2
-                            FRS_data{idx} = load(current_filepath,variable_names_to_load{:}) ;
-                        else
-                            FRS_data{idx} = load(current_filepath) ;
+                    t_load = tic ;
+                    
+                    % make sure directory has a slash at the end
+                    if ~strcmp(P.FRS_directory(end),'/')
+                        P.FRS_directory = [P.FRS_directory, '/'] ;
+                    end
+                    
+                    % get all files in the FRS directory
+                    files = dir(P.FRS_directory) ;
+                    
+                    % set up structure to store FRSes
+                    N_files = length(files) ;
+                    FRS_data = cell(1,N_files) ;
+                    
+                    % iterate through files and load each .mat file
+                    for idx = 1:N_files
+                        current_filename = files(idx).name ;
+                        current_filepath = [P.FRS_directory,current_filename] ;
+                        
+                        if ~strcmp(current_filename(1),'.') && ...
+                                strcmp(current_filename(end-3:end),'.mat')
+                            if nargin > 2
+                                FRS_data{idx} = load(current_filepath,variable_names_to_load{:}) ;
+                            else
+                                FRS_data{idx} = load(current_filepath) ;
+                            end
                         end
                     end
+                    
+                    % remove any empty cells from the FRS data
+                    FRS_data = FRS_data(~cellfun('isempty',FRS_data)) ;
+                    
+                    % fill in planner's FRS field
+                    P.FRS = FRS_data ;
+                    
+                    % report time spent loading
+                    t_load = toc(t_load) ;
+                    P.vdisp(['Time spent loading FRS files: ',num2str(t_load),' s'],1)
                 end
-                
-                % remove any empty cells from the FRS data
-                FRS_data = FRS_data(~cellfun('isempty',FRS_data)) ;
-                
-                % fill in planner's FRS field
-                P.FRS = FRS_data ;
-                
-                % report time spent loading
-                t_load = toc(t_load) ;
-                P.vdisp(['Time spent loading FRS files: ',num2str(t_load),' s'],1)
             end
         end
         

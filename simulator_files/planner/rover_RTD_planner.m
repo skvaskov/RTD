@@ -73,26 +73,39 @@ classdef rover_RTD_planner < generic_RTD_planner
         %% online planning: process obstacles
         function determine_current_FRS(P,agent_info)
             
+            % initialize
             P.current_FRS_index = NaN;
+            
+            % get the agent's information
             v0 = agent_info.state(agent_info.velocity_index,end);
             h0 = agent_info.state(agent_info.heading_index,end);
             delta0 = agent_info.state(5,end);
             
+            % iterate through the FRSes until we find one that matches the
+            % current initial condition
             for i = 1:length(P.FRS)
-                
                 if (v0 >= max(0,P.FRS{i}.v0_min) && v0 <= P.FRS{i}.v0_max)...
                         && (h0 >= P.FRS{i}.psi0_min && h0 <= P.FRS{i}.psi0_max) ...
                         && (delta0 >= P.FRS{i}.delta0_min && delta0 <= P.FRS{i}.delta0_max)
+                    
+                    % set the FRS index and break
                     P.current_FRS_index = i;
                     break
                 end
             end
           
+            % if it didn't work, throw an error
+            if isnan(P.current_FRS_index)
+                error(['The agent is at a state for which we do not have ',...
+                    'an FRS! Please check that the agent is set up correctly!'])
+            end
         end
         
         function process_world_info(P,world_info,~)
             
-            F = P.FRS{P.current_FRS_index};
+            % get the FRS from the current planning iteration
+            F = P.FRS{P.current_FRS_index} ;
+            
             % process the w polynomial from the rover's FRS; this just
             % extracts the msspoly's powers and coefficients to speed up
             % evaluating the polynomial online

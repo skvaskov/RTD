@@ -30,7 +30,7 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
 %
 % Authors: Shreyas Kousik and Sean Vaskov
 % Created: 29 May 2019
-% Updated: 09 Apr 2020
+% Updated: 20 July  2020
 %
     %% parse input arguments
     if nargin < 3
@@ -120,8 +120,18 @@ function [P,patch_data,N_vertices] = get_2D_contour_points(p,x,l,varargin)
         x0 = Offset(1) ;
         y0 = Offset(2) ;
         
-        x_shift = (Scale(1)*Px - x0)*cos(Rotation) - sin(Rotation)*(Scale(1)*Py - y0) ;
-        y_shift = (Scale(2)*Py - y0)*cos(Rotation) + sin(Rotation)*(Scale(2)*Px - x0) ;
+        % check the scale for if it's different in x and y
+        if length(Scale) > 1
+            Scale_x = Scale(1) ;
+            Scale_y = Scale(2) ;
+        else
+            Scale_x = Scale ;
+            Scale_y = Scale ;
+        end
+        
+        % shift and scale the points appropriately
+        x_shift = (Scale_x*Px - x0)*cos(Rotation) - sin(Rotation)*(Scale_x*Py - y0) ;
+        y_shift = (Scale_y*Py - y0)*cos(Rotation) + sin(Rotation)*(Scale_y*Px - x0) ;
         
         % create the final output
         P = Position + [x_shift ; y_shift];
