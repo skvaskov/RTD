@@ -8,7 +8,7 @@ classdef generic_RTD_planner < planner
         agent_state % agent's state at the beginning of the current plan
         
         % trajectory optimization info
-        trajopt_problem % structure for online trajectory optimization problem
+        trajopt_problem % structure for online trajectory optimization problem3
         lookahead_distance = 1 ; % used to make waypoints
         desired_speed
         latest_plan % structure for most recently planned trajectory
@@ -35,6 +35,14 @@ classdef generic_RTD_planner < planner
             
             % parse input args
             P = parse_args(P,'buffer',buffer,varargin{:}) ;
+            
+            % make sure spotless is installed
+            try
+                x = msspoly('x') ;
+            catch
+                error(['Please make spotless is installed and on your MATLAB ',...
+                    'path! Get it here: https://github.com/spot-toolbox/spotless']) ;
+            end
             
             % instantiate FRS and high level planner
             P.load_FRS_files()
