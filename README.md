@@ -12,11 +12,13 @@ Check out the [tutorial](https://github.com/skousik/RTD_tutorial) to get a gentl
 
 All the code in this repository runs in MATLAB (R2018a or newer).
 
-This repository contains almost everything you need to start playing with RTD. We have included a "frozen in time" version of our [simulator](https://github.com/skousik/simulator) repository.
+This repository contains almost everything you need to start playing with RTD. The other things you will need are:
 
-To run the reachable set computations, you'll need [MOSEK\(https://www.mosek.com/) (free for academic use).
+1. To run the simulations and most of the code, you'll need a copy of our [simulator](https://github.com/skousik/simulator) repository on your MATLAB path.
 
-To run the NMPC planner in the comparison code, you'll need to get [GPOPS](http://www.gpops2.com/) (free for academic use).
+2. To run the reachable set computations, you'll need [MOSEK](https://www.mosek.com/) (free for academic use).
+
+3. To run the NMPC planner in the comparison code, you'll need to get [GPOPS](http://www.gpops2.com/) (free for academic use).
 
 #### Citing this Work
 
