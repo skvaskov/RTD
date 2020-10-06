@@ -43,7 +43,7 @@ psi0_max = 0;
 % hold for all sets
 hZ0{1} = @(z,k) k(1,:)-(1/0.5*k(2,:)-1);
 
-L = [min(A.footprint_vertices(1,:)) max(A.footprint_vertices(2,:))];
+L = [min(A.footprint_vertices(1,:)) max(A.footprint_vertices(1,:))];
 W = [min(A.footprint_vertices(2,:)) max(A.footprint_vertices(2,:))];
 % define range of initial conditions
 Z0_range = [[L(1);W(1);0],[L(2);W(2);0]];
