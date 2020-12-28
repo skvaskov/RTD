@@ -10,14 +10,15 @@ function [z_scale,z_offset,Zsim,Tsim] = get_state_scaling_factors(f_fun,Z0_range
 %z_offset: n_z x 1 double satisfying the above inequality
 %z_scale: n_z x 1double satisfying the above inequality
 
-%input 
+%input
 %dynamics_fun: function handle (t,z,k) that returns the systems dynamics
 %Z0_range: N_z x 2 vector with initial condition range [min,max]
 
 %varargin:
 N=1000; %number of random combos of (z,k) in Z0_range and K_range to generate
-T=1; %Time to forward integrate
-dt=0.1; %time discretization to check for scaling
+Tf=1; %Time to forward integrate to
+Ts=0; %Time to start at
+dt=NaN; %time discretization to check for scaling
 n_scale = 0.6*ones(size(Z0_range,1),1); %box to scale to (typically less than 1)
 plotting = false; %plotting on or off?
 g = []; %function handle g:TxXxK to N_z x N_d matrix, for disturbance terms dz/dt = f + g*d, d(t) in [-1,1]
@@ -48,7 +49,11 @@ for idx = 1:2:length(varargin)
         case 'N'
             N = varargin{idx+1};
         case 'T'
-            T = varargin{idx+1};
+            Tf = varargin{idx+1};
+        case 'Tf'
+            Tf = varargin{idx+1};
+        case 'Ts'
+            Ts = varargin{idx+1};
         case 'dt'
             dt = varargin{idx+1};
         case 'n_scale'
@@ -63,7 +68,7 @@ for idx = 1:2:length(varargin)
             hZ0 = varargin{idx+1};
         case 't_box'
             t_box_times = varargin{idx+1};
-        case 'footprint' 
+        case 'footprint'
             footprint = varargin{idx+1};
         case 'pose_idxs'
             pose_indexs = varargin{idx+1};
@@ -92,7 +97,7 @@ if ~isempty(g)
     
     K_range = [K_range;[-ones(N_d,1),ones(N_d,1)]];
     
-      
+    
     N_k = N_k+N_d;
     
     if N_k-N_d>0
@@ -100,7 +105,7 @@ if ~isempty(g)
     else
         dynamics_fun = @(t,z,k) f_fun(t,z)+g(t,z)*k(1:end,1);
     end
-  
+    
 else
     dynamics_fun = f_fun;
 end
@@ -109,11 +114,11 @@ end
 L = combinator(2,sum(N_k+N_z))';
 
 if N_k>0
-combos_k = NaN(N_k,size(L,2));
-for i = 1:N_k
-    combos_k(i,:) = K_range(i,L(i,:));
-end
-combos_k = [combos_k,randRange(K_range(:,1),K_range(:,2),[],[],1,N-size(L,2))];
+    combos_k = NaN(N_k,size(L,2));
+    for i = 1:N_k
+        combos_k(i,:) = K_range(i,L(i,:));
+    end
+    combos_k = [combos_k,randRange(K_range(:,1),K_range(:,2),[],[],1,N-size(L,2))];
 else
     combos_k = [];
 end
@@ -142,7 +147,7 @@ if ~isempty(hZ0)
         
         
         for i = 1:length(hZ0)
-
+            
             if N_k>0
                 Lz0 = hZ0{i}(combos_z0,combos_k)>=0;
                 combos_k = combos_k(:,Lz0);
@@ -167,8 +172,11 @@ if ~isempty(hZ0)
 end
 
 %forward integrate system and store results
-Tvec = linspace(0,T,round(T/dt));
-
+if isnan(dt)
+    Tvec = linspace(Ts,Tf,10);
+else
+    Tvec = linspace(Ts,Tf,round(Tf/dt));
+end
 
 Z=NaN(N_z,length(Tvec),N,1+size(footprint,2));
 
@@ -180,7 +188,7 @@ for i = 1:N
         [~,temp] = ode45(@(t,z)dynamics_fun(t,z),Tvec,combos_z0(:,i));
     end
     if size(temp,1) < 10
-        a 
+        a
     end
     Z(:,:,i,1) = temp';
 end
@@ -206,7 +214,7 @@ if ~isempty(t_box_times)>0
                 Z_box_times(:,j,i,h) = interp1(Tvec',Z(:,:,i,h)',t_box_times(j))';
             end
         end
-    end 
+    end
 else
     Z_box_times = [];
 end
@@ -228,13 +236,13 @@ end
 
 z_offset = NaN(N_z,1+length(t_box_times));
 z_scale = NaN(N_z,1+length(t_box_times));
-    
+
 %find max and mins and scaling factors
 
 for i=1:N_z
     max_z = max(max(max(Z(i,:,:),[],2,'omitnan'),[],3),[],4);
     min_z = min(min(min(Z(i,:,:),[],2,'omitnan'),[],3),[],4);
-
+    
     z_offset(i,1) = -(max_z+min_z)/2;
     z_scale(i,1) = (max_z-min_z)/(n_scale(i)*2);
     

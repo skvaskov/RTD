@@ -34,6 +34,7 @@ function out = compute_FRS(prob)
 %   hT          1 x 1 msspoly that defines the time horizon T
 %   FRS_states  states for w function (usually [z;k])
 %   hFRS_states vector of msspoly that are positive for domain of w function (usually [hZ;hk])
+%   v_lowerlim  upper limit for v function
 
 % Authors: Shreyas Kousik and Sean Vaskov
 % Created: 12 Apr 2019
@@ -150,6 +151,10 @@ function out = compute_FRS(prob)
 
     % -v(0,.) > 0 on Z0 x K
     prog = sosOnK(prog, -v0, [z;k], [hZ0; hK], degree) ;
+    
+    if isfield(prob,'v_lowerlim')
+        prog = prog.withSOS(v-prob.v_lowerlim);
+    end
 
     % if tracking error is included, we need the following constraints:
     % q - Lgv > 0 on T x Z x K
