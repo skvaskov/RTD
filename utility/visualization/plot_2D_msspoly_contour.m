@@ -49,8 +49,8 @@ function h = plot_2D_msspoly_contour(p,x,l,varargin)
     P = reshape(full(msubs(p,x,X)),100,100) ;
     
 %     % scale and shift for plotting
-%     X1 = Scale*(X1 + Offset(1)) ;
-%     X2 = Scale*(X2 + Offset(2)) ;
+%     X1 = Scale*(X1) + Offset(1) ;
+%     X2 = Scale*(X2) + Offset(2) ;
     if numel(Scale) ==1
         Scale = [Scale,Scale];
     end
