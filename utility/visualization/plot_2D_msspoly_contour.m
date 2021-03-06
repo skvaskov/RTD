@@ -20,6 +20,7 @@ function h = plot_2D_msspoly_contour(p,x,l,varargin)
     Offset = [0;0] ;
     Scale = 1 ;
     FillColor = [] ;
+    Range = [-1 1;-1 1];
     
     % iterate through varargin to find Offset and Scale
     varargin_new = {} ;
@@ -32,6 +33,8 @@ function h = plot_2D_msspoly_contour(p,x,l,varargin)
                 Scale = varargin{idx+1} ;
             case 'FillColor'
                 FillColor = varargin{idx+1} ;
+            case 'Range'
+                Range = varargin{idx+1};
             otherwise
                 varargin_new{idx_new} = varargin{idx} ;
                 varargin_new{idx_new+1} = varargin{idx+1} ;
@@ -41,8 +44,9 @@ function h = plot_2D_msspoly_contour(p,x,l,varargin)
 
 %% set up for plotting
     % set up grid for plotting
-    x_vec = linspace(-1,1,100) ;
-    [X1,X2] = meshgrid(x_vec,x_vec) ;
+    x_vec = linspace(Range(1,1),Range(1,2),100) ;
+    y_vec = linspace(Range(2,1),Range(2,2),100) ;
+    [X1,X2] = meshgrid(x_vec,y_vec) ;
     X = [X1(:), X2(:)]' ;
     
     % create msspoly surface
