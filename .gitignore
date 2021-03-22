@@ -7,3 +7,4 @@ step_5_comparisons/experiment_2/rover_data/*summary*.mat
 step_5_comparisons/experiment_3/rover_data/*summary*.mat
 step_5_comparisons/experiment_3/rover_data_b/*summary*.mat
 step_5_comparisons/experiment_2/data_for_figures/*summary*.mat
+*.asv
