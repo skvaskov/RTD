@@ -1,4 +1,4 @@
-function q = msspoly_to_fun(p,x)
+function q = msspoly_to_fun(p,x,fname)
 
 % this function takes in an msspoly, p(x) and returns it as a matlab
 % function handle, q
@@ -56,6 +56,10 @@ else
     error('there is some bug with the dimensions of the msspoly and symbols')
 end
 
-q = matlabFunction(q,'vars',xsym_fun);
+if nargin>2
+    q = matlabFunction(q,'vars',xsym_fun,'File',fname);
+else
+    q = matlabFunction(q,'vars',xsym_fun);
+end
 
 end
