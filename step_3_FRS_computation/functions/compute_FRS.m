@@ -89,6 +89,7 @@ function out = compute_FRS(prob)
     else
         x = [];
     end
+    
 
 %% define variables
     disp('Defining problem variables')
@@ -121,7 +122,11 @@ function out = compute_FRS(prob)
     end
 
     % create variables for the equality constraints of the program (D)
-    t0 = 0 ;
+    if isfield(prob,'t0')
+        t0 = prob.t0;
+    else
+        t0 = 0 ;
+    end
     v0 = subs(v,t,t0) ;
     dvdt = diff(v,t) ;
     dvdz = diff(v,z) ;
@@ -154,6 +159,13 @@ function out = compute_FRS(prob)
     
     if isfield(prob,'v_lowerlim')
         prog = prog.withSOS(v-prob.v_lowerlim);
+    end
+    
+    if isfield(prob,'hBoundary')
+        hBoundary = prob.hBoundary;
+        for i = 1:length(hBoundary)
+             prog = sosOnK(prog, v ,[t;z;k], [hT; hBoundary{i}; hK], degree) ;
+        end
     end
 
     % if tracking error is included, we need the following constraints:
