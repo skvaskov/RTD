@@ -1,4 +1,4 @@
-function q = msspoly_to_fun(p,x,fname)
+function q = msspoly_to_fun(p,x,fname,optimflag)
 
 % this function takes in an msspoly, p(x) and returns it as a matlab
 % function handle, q
@@ -57,7 +57,11 @@ else
 end
 
 if nargin>2
-    q = matlabFunction(q,'vars',xsym_fun,'File',fname);
+    if nargin>3
+        q = matlabFunction(q,'vars',xsym_fun,'File',fname,'Optimize',optimflag);
+    else
+        q = matlabFunction(q,'vars',xsym_fun,'File',fname);
+    end
 else
     q = matlabFunction(q,'vars',xsym_fun);
 end
