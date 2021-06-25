@@ -27,7 +27,7 @@ function [r,a] = compute_point_spacings(FP,b)
     elseif length(FP) == 1
         R = FP ; % robot radius
         
-        if b < R
+        if b > R
             disp('Resizing the buffer to be smaller!')
             b = R ;
         end
