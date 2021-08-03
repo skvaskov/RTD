@@ -74,6 +74,20 @@ function out = compute_FRS(prob)
     else
         hFRS_states = [hZ ;hK];
     end
+    
+   
+    if isfield(prob,'vproj_states')
+        vproj_states = prob.vproj_states ;
+    else
+        vproj_states = [];
+    end
+
+
+    if isfield(prob,'hvproj_states')
+        hvproj_states = prob.hvproj_states ;
+    else
+        hvproj_states = [];
+    end
 
     % tracking error function g (default is to not have g, so we don't need
     % to compute the q decision variable, which makes the offline FRS
@@ -112,6 +126,10 @@ function out = compute_FRS(prob)
     % create (v,w,q) decision variable polynomials
     [prog, v, ~] = prog.newFreePoly(vmon) ;
     [prog, w, wcoeff] = prog.newFreePoly(wmon) ;
+     if ~isempty(vproj_states)
+        vprojmon = monomials(vproj_states,0:degree);
+        [prog, vproj, ~] = prog.newFreePoly(vprojmon) ;
+     end
 
     if exist('g','var')
         q = msspoly(zeros([size(g,2),1])) ;
@@ -148,9 +166,15 @@ function out = compute_FRS(prob)
         prog = sosOnK(prog, -Lfv, [t;z;k], [hT; hZ; hK], degree) ;
     end
 
-    % v(t,.) + w > 1 on T x Z x K
-    prog = sosOnK(prog, v + w - 1, unique([t;z;FRS_states;k]), unique([hT;hFRS_states; hZ; hK]), degree) ;
+    if isempty(vproj_states)
+        % v(t,.) + w > 1 on T x Z x K
+        prog = sosOnK(prog, v + w - 1, unique([t;z;FRS_states;k]), unique([hT;hFRS_states; hZ; hK]), degree) ;
+    else
+        prog = sosOnK(prog,  v+vproj, unique([t;z;vproj_states;k]), unique([hT;hvproj_states; hZ; hK]), degree) ;
 
+        prog = sosOnK(prog,  w-vproj - 1, [t;vproj_states;k], [hT;hvproj_states; hK], degree) ;
+    end
+    
     % w > 0 on hFRS states
     prog = sosOnK(prog, w, FRS_states, hFRS_states, degree) ;
 
@@ -164,7 +188,12 @@ function out = compute_FRS(prob)
     if isfield(prob,'hBoundary')
         hBoundary = prob.hBoundary;
         for i = 1:length(hBoundary)
-             prog = sosOnK(prog, v ,[t;z;k], [hT; hBoundary{i}; hK], degree) ;
+            if ~isempty(vproj_states)
+                prog = sosOnK(prog, -vproj ,[t;vproj_states;k], [hT; hBoundary{i}; hK], degree) ;
+                
+            else
+                prog = sosOnK(prog, v ,[t;z;k], [hT; hBoundary{i}; hK], degree) ;
+            end
         end
     end
 
@@ -206,6 +235,9 @@ function out = compute_FRS(prob)
     w_out = sol.eval(w) ;
 
     out.v = v_out ;
+    if ~isempty(vproj_states)
+        out.vproj = sol.eval(vproj);
+    end
     out.lyapunov_function = v_out ;
     out.w = w_out ;
     out.indicator_function = w_out ;
